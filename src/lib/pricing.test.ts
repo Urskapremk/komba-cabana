@@ -17,6 +17,7 @@ import {
   resolvedSegments,
   PERSON_RATE_CARDS,
   PERSON_SEASONS,
+  formatSeasonRange,
   emptyOffers,
   guestCounts,
   personRateCard,
@@ -200,6 +201,21 @@ describe("shranjene cene", () => {
     assert.equal(cenik.offers["beach-4"]["zima-1"][3], 360);
     assert.equal(cenik.offers["ocean-1"]["poletje-1"][4], null);
     assert.equal(cenik.personRates["ocean-1"].zima[4], 560);
+    assert.equal(cenik.web2027["ocean-1"].zima[4], null);
+  });
+
+  it("leto 2027 za WEB ostane prazno, dokler cena ni vpisana", () => {
+    const cenik = readCenik({
+      web2027: { "ocean-1": { zima: { "4": 610 } }, "beach-4": { "poletje-december": { "1": 500 } } },
+    });
+    assert.ok(cenik);
+    assert.equal(cenik.web2027["ocean-1"].zima[4], 610);
+    assert.equal(cenik.web2027["ocean-1"].zima[1], null);
+    assert.equal(cenik.web2027["ocean-2"]["pomlad-jesen"][2], null);
+    assert.equal(cenik.web2027["beach-4"]["poletje-december"][1], 500);
+    assert.equal(cenik.personRates["ocean-1"].zima[4], 560);
+    assert.equal(formatSeasonRange("12-19", "01-10", 2027), "19. 12. 2027 – 10. 1. 2028");
+    assert.equal(formatSeasonRange("01-11", "03-28", 2027), "11. 1. 2027 – 28. 3. 2027");
   });
 });
 

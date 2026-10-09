@@ -25,10 +25,11 @@ import {
   defaultPersonRates,
   discountSentence,
   emptyOffers,
+  emptyPersonRates,
   floor2026,
   formatDate,
   formatEuro,
-  formatMonthDay,
+  formatSeasonRange,
   formatPercent,
   guestLabel,
   personColumns,
@@ -41,7 +42,7 @@ import {
 
 const STORAGE_KEY = "komba-cabana-cenik-v1";
 
-type Cenik = { prices: Prices; offers: Offers; personRates: PersonRates };
+type Cenik = { prices: Prices; offers: Offers; personRates: PersonRates; web2027: PersonRates };
 
 const SEASON_SOFT: Record<string, string> = {
   zima: "bg-[#f3f7f9]",
@@ -68,7 +69,7 @@ function parseCenik(raw: string | null): Cenik | null {
 }
 
 function blankCenik(): Cenik {
-  return { prices: clonePrices(), offers: emptyOffers(), personRates: defaultPersonRates() };
+  return { prices: clonePrices(), offers: emptyOffers(), personRates: defaultPersonRates(), web2027: emptyPersonRates() };
 }
 
 function EuroInput({
@@ -174,7 +175,16 @@ export function PriceTables() {
     } catch {
       envelope = {};
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...envelope, prices: next.prices, offers: next.offers }));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...envelope,
+        prices: next.prices,
+        offers: next.offers,
+        personRates: next.personRates,
+        web2027: next.web2027,
+      }),
+    );
   }
 
   function setPrice(unitId: string, periodId: string, next: Money) {
@@ -218,6 +228,27 @@ export function PriceTables() {
     });
   }
 
+  function setWeb2027(unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) {
+    const row = cenik.web2027[unitId][seasonId];
+    commit({
+      ...cenik,
+      web2027: {
+        ...cenik.web2027,
+        [unitId]: {
+          ...cenik.web2027[unitId],
+          [seasonId]: { ...row, [guests]: amount },
+        },
+      },
+    });
+  }
+
+  function resetWeb2027(unitId: string) {
+    commit({
+      ...cenik,
+      web2027: { ...cenik.web2027, [unitId]: emptyPersonRates()[unitId] },
+    });
+  }
+
   const dirty = BUNGALOWS.some((bungalow) =>
     PERIODS.some((period) => !sameMoney(prices[bungalow.id][period.id], OPTIMA_PRICES[bungalow.id][period.id])),
   );
@@ -234,13 +265,13 @@ export function PriceTables() {
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
               Fiksne cene WEB
               <br />
-              Variabilni razpon za kanale
+              2027 za vpis
             </p>
           </div>
           <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
             Fiksne cene WEB so na noč za spletno stran. Pri I, II in III je ista cena tudi na
-            Bookingu, Airbnbju in Agodi. Polni penzion ni vključen. Variabilne cene spodaj so razpon
-            min in max iz predloga Optima. Vpis ostane v brskalniku.
+            Bookingu, Airbnbju in Agodi. Polni penzion ni vključen. Za 2027 je ista tabela prazna,
+            da vpišeš nove cene. Vpis ostane v brskalniku.
           </p>
         </div>
       </header>
@@ -250,6 +281,16 @@ export function PriceTables() {
           rates={cenik.personRates}
           onChange={setPersonRate}
           onReset={resetPersonRate}
+        />
+        <PersonRatesSection
+          id="web-2027"
+          title="Fiksne cene WEB 2027"
+          intro="Ista obdobja in ista pravila popusta, premaknjena v leto 2027. Celice so prazne, da vpišeš cene."
+          year={2027}
+          blank
+          rates={cenik.web2027}
+          onChange={setWeb2027}
+          onReset={resetWeb2027}
         />
 
         <Rules />
@@ -302,28 +343,37 @@ export function PriceTables() {
 }
 
 function PersonRatesSection({
+  id = "osebe",
+  title = "Fiksne cene WEB",
+  intro = "Cena na noč. Pri I, II in III je enaka na spletni strani, Bookingu, Airbnbju in Agodi. Beach Villa ima ceno samo na spletni strani. 9. 7.–13. 7. je v pomladi in v poletju.",
+  year,
+  blank = false,
   rates,
   onChange,
   onReset,
 }: {
+  id?: string;
+  title?: string;
+  intro?: string;
+  year?: number;
+  blank?: boolean;
   rates: PersonRates;
   onChange: (unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
   onReset: (unitId: string) => void;
 }) {
   return (
-    <section id="osebe" className="flex w-full min-w-0 scroll-mt-6 flex-col gap-5">
+    <section id={id} className="flex w-full min-w-0 scroll-mt-6 flex-col gap-5">
       <div>
-        <h2 className="font-heading text-2xl tracking-tight">Fiksne cene WEB</h2>
-        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Cena na noč. Pri I, II in III je enaka na spletni strani, Bookingu, Airbnbju in Agodi.
-          Beach Villa ima ceno samo na spletni strani. 9. 7.–13. 7. je v pomladi in v poletju.
-        </p>
+        <h2 className="font-heading text-2xl tracking-tight">{title}</h2>
+        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">{intro}</p>
       </div>
       {PERSON_RATE_CARDS.map((card) => (
         <PersonRateCard
           key={card.id}
           unitId={card.id}
           rows={rates[card.id]}
+          year={year}
+          blank={blank}
           onChange={(seasonId, guests, amount) => onChange(card.id, seasonId, guests, amount)}
           onReset={() => onReset(card.id)}
         />
@@ -335,21 +385,27 @@ function PersonRatesSection({
 function PersonRateCard({
   unitId,
   rows,
+  year,
+  blank = false,
   onChange,
   onReset,
 }: {
   unitId: string;
   rows: PersonRates[string];
+  year?: number;
+  blank?: boolean;
   onChange: (seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
   onReset: () => void;
 }) {
   const card = personRateCard(unitId);
-  if (!card) return null;
+  if (!card || !rows) return null;
   const guests = personColumns(card.capacity);
   const changed = PERSON_SEASONS.some((season) =>
-    guests.some((count) => rows[season.id]?.[count] !== card.seasons[season.id][count]),
+    guests.some((count) =>
+      blank ? rows[season.id]?.[count] != null : rows[season.id]?.[count] !== card.seasons[season.id][count],
+    ),
   );
-  const periodWidth = 34;
+  const periodWidth = year ? 40 : 34;
   const guestWidth = `${(100 - periodWidth) / guests.length}%`;
 
   return (
@@ -360,7 +416,7 @@ function PersonRateCard({
           <p className="text-xs text-white/70">{card.detail}</p>
         </div>
         <Button size="sm" variant="secondary" disabled={!changed} onClick={onReset}>
-          Ponastavi
+          {blank ? "Počisti" : "Ponastavi"}
         </Button>
       </div>
       <p className="bg-[#f8f1e4] px-4 py-2.5 text-sm leading-relaxed text-[#3f3424]">
@@ -368,7 +424,10 @@ function PersonRateCard({
         {card.note ? ` ${card.note}` : ""}
       </p>
       <div className="max-w-full overflow-x-auto bg-card">
-        <table className="table-fixed border-collapse text-sm" style={{ width: `${260 + guests.length * 150}px` }}>
+        <table
+          className="table-fixed border-collapse text-sm"
+          style={{ width: `${(year ? 340 : 260) + guests.length * 150}px` }}
+        >
           <colgroup>
             <col style={{ width: `${periodWidth}%` }} />
             {guests.map((count) => (
@@ -392,15 +451,16 @@ function PersonRateCard({
                   <span className="font-medium">{season.label}</span>
                   {season.ranges.map((range) => (
                     <span key={`${range.from}-${range.to}`} className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
-                      {formatMonthDay(range.from)} – {formatMonthDay(range.to)}
+                      {formatSeasonRange(range.from, range.to, year)}
                     </span>
                   ))}
                 </td>
                 {guests.map((count) => (
                   <td key={count} className={cn(bodyCell, "text-right")}>
                     <EuroInput
-                      label={`${card.name}, ${season.label}, ${guestLabel(count)}`}
+                      label={`${card.name}, ${year ?? "WEB"}, ${season.label}, ${guestLabel(count)}`}
                       value={rows[season.id]?.[count] ?? null}
+                      pending={blank && rows[season.id]?.[count] == null}
                       onChange={(amount) => onChange(season.id, count, amount)}
                     />
                   </td>

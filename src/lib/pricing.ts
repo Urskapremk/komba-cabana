@@ -441,6 +441,26 @@ export function defaultPersonRates(): PersonRates {
   return rates;
 }
 
+export function emptyPersonRates(): PersonRates {
+  const rates: PersonRates = {};
+  for (const card of PERSON_RATE_CARDS) {
+    const seasons = {} as PersonRates[string];
+    for (const season of PERSON_SEASONS) {
+      const row: Record<number, number | null> = {};
+      for (const count of personColumns(card.capacity)) row[count] = null;
+      seasons[season.id] = row;
+    }
+    rates[card.id] = seasons;
+  }
+  return rates;
+}
+
+export function formatSeasonRange(from: string, to: string, year?: number): string {
+  if (!year) return `${formatMonthDay(from)} – ${formatMonthDay(to)}`;
+  const endYear = Number(to.slice(0, 2)) < Number(from.slice(0, 2)) ? year + 1 : year;
+  return `${formatMonthDay(from)} ${year} – ${formatMonthDay(to)} ${endYear}`;
+}
+
 export function personRateCard(unitId: string): PersonRateCard | undefined {
   return PERSON_RATE_CARDS.find((card) => card.id === unitId);
 }
@@ -504,10 +524,10 @@ export function sanitizeOffers(input: unknown): Offers | null {
   return recognized ? next : null;
 }
 
-export function sanitizePersonRates(input: unknown): PersonRates | null {
+function readPersonGrid(input: unknown, base: PersonRates): PersonRates | null {
   if (!input || typeof input !== "object") return null;
   const source = input as Record<string, unknown>;
-  const next = defaultPersonRates();
+  const next = base;
   let recognized = false;
   for (const card of PERSON_RATE_CARDS) {
     const row = source[card.id];
@@ -526,18 +546,30 @@ export function sanitizePersonRates(input: unknown): PersonRates | null {
   return recognized ? next : null;
 }
 
-export function readCenik(input: unknown): { prices: Prices; offers: Offers; personRates: PersonRates } | null {
+export function sanitizePersonRates(input: unknown): PersonRates | null {
+  return readPersonGrid(input, defaultPersonRates());
+}
+
+export function sanitizeWeb2027(input: unknown): PersonRates | null {
+  return readPersonGrid(input, emptyPersonRates());
+}
+
+export function readCenik(
+  input: unknown,
+): { prices: Prices; offers: Offers; personRates: PersonRates; web2027: PersonRates } | null {
   if (!input || typeof input !== "object") return null;
-  const envelope = input as { prices?: unknown; offers?: unknown; personRates?: unknown };
+  const envelope = input as { prices?: unknown; offers?: unknown; personRates?: unknown; web2027?: unknown };
   const pricesSource = "prices" in envelope ? envelope.prices : envelope;
   const prices = sanitizePrices(pricesSource);
   const offers = sanitizeOffers(envelope.offers);
   const personRates = sanitizePersonRates(envelope.personRates);
-  if (!prices && !offers && !personRates) return null;
+  const web2027 = sanitizeWeb2027(envelope.web2027);
+  if (!prices && !offers && !personRates && !web2027) return null;
   return {
     prices: prices ?? clonePrices(),
     offers: offers ?? emptyOffers(),
     personRates: personRates ?? defaultPersonRates(),
+    web2027: web2027 ?? emptyPersonRates(),
   };
 }
 
