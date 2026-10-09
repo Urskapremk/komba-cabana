@@ -335,11 +335,10 @@ describe("cene po osebah", () => {
     assert.equal(cenik?.commission["ocean-1"], 15);
     assert.equal(cenik?.commission["beach-4"], null);
     assert.equal(cenik?.commission["ocean-2"], null);
-    const both = afterDiscounts(140, 20, 15);
-    assert.equal(both.early, 112);
-    assert.equal(both.left, 95);
-    assert.deepEqual(afterDiscounts(140, 20, null), { early: 112, left: null });
-    assert.deepEqual(afterDiscounts(140, null, 15), { early: null, left: 119 });
+    assert.deepEqual(afterDiscounts(140, 20, 15), { agency: 21, early: 28, left: 91 });
+    assert.deepEqual(afterDiscounts(140, 20, null), { agency: null, early: 28, left: 112 });
+    assert.deepEqual(afterDiscounts(140, null, 15), { agency: 21, early: null, left: 119 });
+    assert.deepEqual(afterDiscounts(null, 20, 15), { agency: null, early: null, left: null });
     const stored = readCenik({ earlyBooking: { "ocean-2": 10, "garden-3": 150 } });
     assert.equal(stored?.earlyBooking["ocean-2"], 10);
     assert.equal(stored?.earlyBooking["garden-3"], null);

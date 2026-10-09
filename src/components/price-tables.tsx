@@ -723,38 +723,53 @@ function PerPerson({
 }) {
   const each = pricePerPerson(amount, guests);
   const underFloor = floor2027 === true && belowPersonFloor2027(each);
-  const priced = afterDiscounts(each, earlyBooking ?? null, commission ?? null);
   if (each == null) return null;
   return (
     <span className="mt-0.5 block text-right text-[11px] leading-tight text-muted-foreground tabular-nums">
       {formatEuro(each)}
       <span className="block">na osebo</span>
       <span className="block">cena za odraslo osebo</span>
-      {priced.early != null ? (
-        <span className="block font-medium text-[#1e3a46]">early booking {formatEuro(priced.early)}</span>
-      ) : null}
-      {priced.left != null ? <span className="block font-medium text-[#6b3058]">ostane {formatEuro(priced.left)}</span> : null}
+      <DiscountLines amount={each} commission={commission ?? null} earlyBooking={earlyBooking ?? null} />
       {underFloor ? (
         <span className="block font-medium text-[#8a3b28]">pod minimumom {PERSON_FLOOR_2027} €</span>
       ) : null}
       {guests >= 3 ? (
         <span className="mt-1 block border-t border-[#e4d8c4] pt-1 text-[10px] leading-snug">
-          {childPrices(each).map((band) => {
-            const childPriced = band.free ? null : afterDiscounts(band.amount, earlyBooking ?? null, commission ?? null);
-            return (
-              <span key={band.id} className="mt-0.5 block">
-                {band.free ? `${band.label}: brezplačno` : `${band.label}: ${formatEuro(band.amount)} (−${band.offPercent} %)`}
-                {childPriced?.early != null ? (
-                  <span className="block font-medium text-[#1e3a46]">early booking {formatEuro(childPriced.early)}</span>
-                ) : null}
-                {childPriced?.left != null ? (
-                  <span className="block font-medium text-[#6b3058]">ostane {formatEuro(childPriced.left)}</span>
-                ) : null}
-              </span>
-            );
-          })}
+          {childPrices(each).map((band) => (
+            <span key={band.id} className="mt-0.5 block">
+              {band.free ? `${band.label}: brezplačno` : `${band.label}: ${formatEuro(band.amount)} (−${band.offPercent} %)`}
+              {band.free ? null : (
+                <DiscountLines amount={band.amount} commission={commission ?? null} earlyBooking={earlyBooking ?? null} />
+              )}
+            </span>
+          ))}
         </span>
       ) : null}
+    </span>
+  );
+}
+
+function DiscountLines({
+  amount,
+  commission,
+  earlyBooking,
+}: {
+  amount: number;
+  commission: number | null;
+  earlyBooking: number | null;
+}) {
+  const priced = afterDiscounts(amount, earlyBooking, commission);
+  if (priced.agency == null && priced.early == null) return null;
+  return (
+    <span className="mt-1 block border-t border-[#e4d8c4] pt-1">
+      <span className="block">polna cena {formatEuro(amount)}</span>
+      {priced.agency != null ? (
+        <span className="block font-medium text-[#6b3058]">− agencija {formatEuro(priced.agency)}</span>
+      ) : null}
+      {priced.early != null ? (
+        <span className="block font-medium text-[#1e3a46]">− early booking {formatEuro(priced.early)}</span>
+      ) : null}
+      {priced.left != null ? <span className="block font-medium text-[#1c1915]">ostane {formatEuro(priced.left)}</span> : null}
     </span>
   );
 }
@@ -772,16 +787,11 @@ function PersonNet({
 }) {
   if (commission == null && earlyBooking == null) return null;
   const each = pricePerPerson(amount, guests);
-  const priced = afterDiscounts(each, earlyBooking, commission);
   if (each == null) return null;
-  if (priced.early == null && priced.left == null) return null;
   return (
     <span className="mt-0.5 block text-right text-[11px] leading-tight text-muted-foreground">
       <span className="block">{formatEuro(each)} na osebo</span>
-      {priced.early != null ? (
-        <span className="block font-medium text-[#1e3a46]">early booking {formatEuro(priced.early)}</span>
-      ) : null}
-      {priced.left != null ? <span className="block font-medium text-[#6b3058]">ostane {formatEuro(priced.left)}</span> : null}
+      <DiscountLines amount={each} commission={commission} earlyBooking={earlyBooking} />
     </span>
   );
 }

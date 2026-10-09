@@ -717,15 +717,26 @@ export function netAfterCommission(amount: number | null, percent: number | null
   return next;
 }
 
-/** Early booking se odšteje najprej, provizija agencije od znižane cene. */
+/** Odstotek od polne cene, zaokrožen na evro. */
+export function discountShare(amount: number | null, percent: number | null): number | null {
+  if (amount == null || percent == null || !Number.isFinite(percent)) return null;
+  const cut = Math.round((amount * percent) / 100);
+  if (cut < 0 || cut > amount) return null;
+  return cut;
+}
+
+/** Polna cena minus agencija minus Early booking. Oba odbitka sta od polne cene. */
 export function afterDiscounts(
   amount: number | null,
   earlyBooking: number | null,
   commission: number | null,
-): { early: number | null; left: number | null } {
-  const early = netAfterCommission(amount, earlyBooking);
-  const left = netAfterCommission(earlyBooking == null ? amount : early, commission);
-  return { early, left };
+): { agency: number | null; early: number | null; left: number | null } {
+  if (amount == null) return { agency: null, early: null, left: null };
+  const agency = discountShare(amount, commission);
+  const early = discountShare(amount, earlyBooking);
+  if (agency == null && early == null) return { agency: null, early: null, left: null };
+  const left = Math.max(0, amount - (agency ?? 0) - (early ?? 0));
+  return { agency, early, left };
 }
 
 export function liftAmount(amount: number | null, percent: number): number | null {
