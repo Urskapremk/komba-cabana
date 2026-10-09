@@ -22,6 +22,8 @@ import {
   guestCounts,
   personRateCard,
   childPrices,
+  PERSON_FLOOR_2027,
+  belowPersonFloor2027,
   pricePerPerson,
   beachWeb2027FromFamily,
   defaultPersonRates,
@@ -312,6 +314,14 @@ describe("cene po osebah", () => {
     assert.equal(pricePerPerson(420, 1), 420);
     assert.equal(pricePerPerson(670, 4), 168);
     assert.equal(pricePerPerson(null, 4), null);
+  });
+
+  it("minimalna cena 2027 je 120 € na osebo", () => {
+    assert.equal(PERSON_FLOOR_2027, 120);
+    assert.equal(belowPersonFloor2027(119), true);
+    assert.equal(belowPersonFloor2027(120), false);
+    assert.equal(belowPersonFloor2027(140), false);
+    assert.equal(belowPersonFloor2027(null), false);
   });
 
   it("otrok pri 3. ali 4. osebi ima popust od cene odraslega", () => {

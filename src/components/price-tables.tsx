@@ -37,6 +37,8 @@ import {
   formatSeasonRange,
   formatPercent,
   guestLabel,
+  PERSON_FLOOR_2027,
+  belowPersonFloor2027,
   personColumns,
   personRateCard,
   pricePerPerson,
@@ -333,6 +335,7 @@ export function PriceTables() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Trenutna cena in leto 2027 sta v isti vrstici. Pod ceno bungalova je preračun na osebo, cena za odraslo osebo.
+            Minimalna cena 2027 je {PERSON_FLOOR_2027} € na osebo.
             Pri 2027 vpišeš odstotek in dvigneš vse cene tega bungalova od trenutnega WEB. Beach Villa
             je samo na spletni strani, v letu 2027 pa ima enake cene kot Bungalow I - Family. Prazniki
             2027 trajajo do 10. 1. 2028. Zimski december 2026 pri variabilnih cenah traja do 18. 12.,
@@ -496,6 +499,9 @@ function WebCompareCard({
               </th>
               <th colSpan={guests.length} className={cn(headCell, "bg-[#f3e6c8] text-center")}>
                 2027
+                <span className="mt-0.5 block text-[10px] font-normal tracking-normal normal-case">
+                  min. {PERSON_FLOOR_2027} € na osebo
+                </span>
               </th>
             </tr>
             <tr className="text-xs tracking-wide text-[#5c5142] uppercase">
@@ -546,7 +552,7 @@ function WebCompareCard({
                         readOnly={linkedToFamily}
                         onChange={(value) => onChangeNext(season.id, count, value)}
                       />
-                      <PerPerson amount={amount} guests={count} />
+                      <PerPerson amount={amount} guests={count} floor2027 />
                       {amount != null ? (
                         <span className="mt-0.5 block text-xs">
                           <Delta base={current[season.id]?.[count] ?? null} next={amount} />
@@ -628,14 +634,26 @@ function percentText(value: number | null): string {
   return new Intl.NumberFormat("sl-SI", { maximumFractionDigits: 1 }).format(value);
 }
 
-function PerPerson({ amount, guests }: { amount: number | null; guests: number }) {
+function PerPerson({
+  amount,
+  guests,
+  floor2027,
+}: {
+  amount: number | null;
+  guests: number;
+  floor2027?: boolean;
+}) {
   const each = pricePerPerson(amount, guests);
+  const underFloor = floor2027 === true && belowPersonFloor2027(each);
   if (each == null) return null;
   return (
     <span className="mt-0.5 block text-right text-[11px] leading-tight text-muted-foreground tabular-nums">
       {formatEuro(each)}
       <span className="block">na osebo</span>
       <span className="block">cena za odraslo osebo</span>
+      {underFloor ? (
+        <span className="block font-medium text-[#8a3b28]">pod minimumom {PERSON_FLOOR_2027} €</span>
+      ) : null}
       {guests >= 3 ? (
         <span className="mt-1 block border-t border-[#e4d8c4] pt-1 text-[10px] leading-snug">
           {childPrices(each).map((band) => (
@@ -701,6 +719,10 @@ function Rules() {
           Optima prosi, da javite, če za 2026 dovolita drugačne minimalne cene. Ramena in novo leto
           v pismu nista posebej omejena.
         </p>
+        <div className="border-t border-[#e4d8c4] bg-[#f3e6c8] px-4 py-3 text-sm leading-relaxed text-[#3f3424]">
+          <p className="font-medium">Minimalna cena 2027</p>
+          <p className="mt-1">{PERSON_FLOOR_2027} € na osebo, pri vseh bungalovih, celo leto.</p>
+        </div>
       </article>
 
       <article className="min-w-0 overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">

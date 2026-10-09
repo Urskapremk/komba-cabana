@@ -854,6 +854,13 @@ export function datesDiffer(period: ComparePeriod): boolean {
   return period.from2026.slice(5) !== period.from2027.slice(5) || period.to2026.slice(5) !== period.to2027.slice(5);
 }
 
+/** Minimalna cena odrasle osebe v letu 2027, pri vseh bungalovih. */
+export const PERSON_FLOOR_2027 = 120;
+
+export function belowPersonFloor2027(amount: number | null): boolean {
+  return amount != null && amount < PERSON_FLOOR_2027;
+}
+
 /** Minimalna cena iz pisma za 2026. Ramena in novo leto tam nista posebej določena. */
 export function floor2026(unitId: string, periodId: string): { amount: number; label: string } | null {
   if (unitId === "ocean-2" || unitId === "garden-3") return { amount: 200, label: "celo leto" };
