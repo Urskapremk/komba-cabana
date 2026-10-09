@@ -506,8 +506,8 @@ function WebCompareCard({
         {card.capacity >= 3 ? ` ${childStaySentence()}` : ""}
         {card.note ? ` ${card.note}` : ""}
       </p>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#d5e4da] bg-[#e7f2eb] px-4 py-2">
-        <p className="text-sm text-[#1d3b2e]">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#e6d5e0] bg-[#f6eef4] px-4 py-2">
+        <p className="text-sm text-[#6b3058]">
           <span className="font-medium">Provizija agencije</span>
           <span className="ml-2">koliko ostane na osebo</span>
         </p>
@@ -733,7 +733,7 @@ function PerPerson({
       {priced.early != null ? (
         <span className="block font-medium text-[#1e3a46]">early booking {formatEuro(priced.early)}</span>
       ) : null}
-      {priced.left != null ? <span className="block font-medium text-[#1d6b45]">ostane {formatEuro(priced.left)}</span> : null}
+      {priced.left != null ? <span className="block font-medium text-[#6b3058]">ostane {formatEuro(priced.left)}</span> : null}
       {underFloor ? (
         <span className="block font-medium text-[#8a3b28]">pod minimumom {PERSON_FLOOR_2027} €</span>
       ) : null}
@@ -748,7 +748,7 @@ function PerPerson({
                   <span className="block font-medium text-[#1e3a46]">early booking {formatEuro(childPriced.early)}</span>
                 ) : null}
                 {childPriced?.left != null ? (
-                  <span className="block font-medium text-[#1d6b45]">ostane {formatEuro(childPriced.left)}</span>
+                  <span className="block font-medium text-[#6b3058]">ostane {formatEuro(childPriced.left)}</span>
                 ) : null}
               </span>
             );
@@ -781,7 +781,7 @@ function PersonNet({
       {priced.early != null ? (
         <span className="block font-medium text-[#1e3a46]">early booking {formatEuro(priced.early)}</span>
       ) : null}
-      {priced.left != null ? <span className="block font-medium text-[#1d6b45]">ostane {formatEuro(priced.left)}</span> : null}
+      {priced.left != null ? <span className="block font-medium text-[#6b3058]">ostane {formatEuro(priced.left)}</span> : null}
     </span>
   );
 }
