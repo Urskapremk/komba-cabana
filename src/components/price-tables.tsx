@@ -44,7 +44,7 @@ import {
   pricePerPerson,
   priceDelta,
   liftPersonUnit,
-  netAfterCommission,
+  afterDiscounts,
   parseCommission,
   parsePercent,
   readCenik,
@@ -61,6 +61,7 @@ type Cenik = {
   web2027: PersonRates;
   webLift: WebLift;
   commission: WebLift;
+  earlyBooking: WebLift;
 };
 
 const SEASON_SOFT: Record<string, string> = {
@@ -92,6 +93,7 @@ function mirrorBeach(cenik: Cenik): Cenik {
     ...cenik,
     webLift: cenik.webLift ?? emptyWebLift(),
     commission: cenik.commission ?? emptyWebLift(),
+    earlyBooking: cenik.earlyBooking ?? emptyWebLift(),
     web2027: {
       ...cenik.web2027,
       "beach-4": beachWeb2027FromFamily(cenik.web2027, cenik.personRates),
@@ -107,6 +109,7 @@ function blankCenik(): Cenik {
     web2027: emptyPersonRates(),
     webLift: emptyWebLift(),
     commission: emptyWebLift(),
+    earlyBooking: emptyWebLift(),
   };
 }
 
@@ -211,6 +214,7 @@ export function PriceTables() {
   const cenik = mirrorBeach(draft ?? stored ?? blankCenik());
   const webLift = cenik.webLift ?? emptyWebLift();
   const commission = cenik.commission ?? emptyWebLift();
+  const earlyBooking = cenik.earlyBooking ?? emptyWebLift();
   const prices = cenik.prices;
 
   function commit(next: Cenik) {
@@ -233,6 +237,7 @@ export function PriceTables() {
         web2027: synced.web2027,
         webLift: synced.webLift ?? emptyWebLift(),
         commission: synced.commission ?? emptyWebLift(),
+        earlyBooking: synced.earlyBooking ?? emptyWebLift(),
       }),
     );
   }
@@ -307,6 +312,13 @@ export function PriceTables() {
     });
   }
 
+  function setEarlyBooking(unitId: string, percent: number) {
+    commit({
+      ...cenik,
+      earlyBooking: { ...earlyBooking, [unitId]: percent },
+    });
+  }
+
   function liftWeb2027(unitId: string, percent: number) {
     const lifted = liftPersonUnit(unitId, cenik.personRates[unitId], percent);
     if (!lifted) return;
@@ -349,8 +361,7 @@ export function PriceTables() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Trenutna cena in leto 2027 sta v isti vrstici. Pod ceno bungalova je preračun na osebo, cena za odraslo osebo.
-            Minimalna cena 2027 je {PERSON_FLOOR_2027} € na osebo. Provizijo agencije vpišeš v odstotkih.
-            Pod ceno na osebo piše, koliko ostane.
+            Minimalna cena 2027 je {PERSON_FLOOR_2027} € na osebo.             Provizijo agencije in Early booking vpišeš v odstotkih. Pod ceno na osebo piše, koliko ostane.
             Pri 2027 vpišeš odstotek in dvigneš vse cene tega bungalova od trenutnega WEB. Beach Villa
             je samo na spletni strani, v letu 2027 pa ima enake cene kot Bungalow I - Family. Prazniki
             2027 trajajo do 10. 1. 2028. Zimski december 2026 pri variabilnih cenah traja do 18. 12.,
@@ -381,7 +392,9 @@ export function PriceTables() {
                   next={cenik.web2027[card.id]}
                   lift={webLift[card.id] ?? null}
                   commission={commission[card.id] ?? null}
+                  earlyBooking={earlyBooking[card.id] ?? null}
                   onCommission={(percent) => setCommission(card.id, percent)}
+                  onEarlyBooking={(percent) => setEarlyBooking(card.id, percent)}
                   onChangeCurrent={(seasonId, guests, amount) => setPersonRate(card.id, seasonId, guests, amount)}
                   onChangeNext={(seasonId, guests, amount) => setWeb2027(card.id, seasonId, guests, amount)}
                   onResetCurrent={() => resetPersonRate(card.id)}
@@ -406,6 +419,7 @@ export function PriceTables() {
                     summary={shiftSentence(card.id, prices)}
                     capacity={card.capacity}
                     commission={commission[card.id] ?? null}
+                    earlyBooking={earlyBooking[card.id] ?? null}
                     onChange={(periodId, next) => setPrice(card.id, periodId, next)}
                     onReset={() => resetUnit(card.id)}
                   />
@@ -414,6 +428,7 @@ export function PriceTables() {
                     prices={prices["beach-4"]}
                     capacity={card.capacity}
                     commission={commission[card.id] ?? null}
+                    earlyBooking={earlyBooking[card.id] ?? null}
                     onChange={(periodId, next) => setPrice("beach-4", periodId, next)}
                     onReset={() => resetUnit("beach-4")}
                   />
@@ -435,7 +450,9 @@ function WebCompareCard({
   next,
   lift,
   commission,
+  earlyBooking,
   onCommission,
+  onEarlyBooking,
   onChangeCurrent,
   onChangeNext,
   onResetCurrent,
@@ -447,7 +464,9 @@ function WebCompareCard({
   next: PersonRates[string];
   lift: number | null;
   commission: number | null;
+  earlyBooking: number | null;
   onCommission: (percent: number) => void;
+  onEarlyBooking: (percent: number) => void;
   onChangeCurrent: (seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
   onChangeNext: (seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
   onResetCurrent: () => void;
@@ -496,6 +515,19 @@ function WebCompareCard({
           label={`${card.name}, provizija agencije`}
           value={commission}
           onApply={onCommission}
+          action="Izračunaj"
+          parse={parseCommission}
+        />
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#d5e0e8] bg-[#e4eef2] px-4 py-2">
+        <p className="text-sm text-[#1e3a46]">
+          <span className="font-medium">Early booking</span>
+          <span className="ml-2">popust na osebo</span>
+        </p>
+        <PercentLift
+          label={`${card.name}, Early booking`}
+          value={earlyBooking}
+          onApply={onEarlyBooking}
           action="Izračunaj"
           parse={parseCommission}
         />
@@ -575,7 +607,7 @@ function WebCompareCard({
                         value={amount}
                         onChange={(value) => onChangeCurrent(season.id, count, value)}
                       />
-                      <PerPerson amount={amount} guests={count} commission={commission} />
+                      <PerPerson amount={amount} guests={count} commission={commission} earlyBooking={earlyBooking} />
                     </td>
                   );
                 })}
@@ -590,7 +622,7 @@ function WebCompareCard({
                         readOnly={linkedToFamily}
                         onChange={(value) => onChangeNext(season.id, count, value)}
                       />
-                      <PerPerson amount={amount} guests={count} commission={commission} floor2027 />
+                      <PerPerson amount={amount} guests={count} commission={commission} earlyBooking={earlyBooking} floor2027 />
                       {amount != null ? (
                         <span className="mt-0.5 block text-xs">
                           <Delta base={current[season.id]?.[count] ?? null} next={amount} />
@@ -681,34 +713,42 @@ function PerPerson({
   guests,
   floor2027,
   commission,
+  earlyBooking,
 }: {
   amount: number | null;
   guests: number;
   floor2027?: boolean;
   commission?: number | null;
+  earlyBooking?: number | null;
 }) {
   const each = pricePerPerson(amount, guests);
   const underFloor = floor2027 === true && belowPersonFloor2027(each);
-  const left = netAfterCommission(each, commission ?? null);
+  const priced = afterDiscounts(each, earlyBooking ?? null, commission ?? null);
   if (each == null) return null;
   return (
     <span className="mt-0.5 block text-right text-[11px] leading-tight text-muted-foreground tabular-nums">
       {formatEuro(each)}
       <span className="block">na osebo</span>
       <span className="block">cena za odraslo osebo</span>
-      {left != null ? <span className="block font-medium text-[#1d6b45]">ostane {formatEuro(left)}</span> : null}
+      {priced.early != null ? (
+        <span className="block font-medium text-[#1e3a46]">early booking {formatEuro(priced.early)}</span>
+      ) : null}
+      {priced.left != null ? <span className="block font-medium text-[#1d6b45]">ostane {formatEuro(priced.left)}</span> : null}
       {underFloor ? (
         <span className="block font-medium text-[#8a3b28]">pod minimumom {PERSON_FLOOR_2027} €</span>
       ) : null}
       {guests >= 3 ? (
         <span className="mt-1 block border-t border-[#e4d8c4] pt-1 text-[10px] leading-snug">
           {childPrices(each).map((band) => {
-            const childLeft = band.free ? null : netAfterCommission(band.amount, commission ?? null);
+            const childPriced = band.free ? null : afterDiscounts(band.amount, earlyBooking ?? null, commission ?? null);
             return (
               <span key={band.id} className="mt-0.5 block">
                 {band.free ? `${band.label}: brezplačno` : `${band.label}: ${formatEuro(band.amount)} (−${band.offPercent} %)`}
-                {childLeft != null ? (
-                  <span className="block font-medium text-[#1d6b45]">ostane {formatEuro(childLeft)}</span>
+                {childPriced?.early != null ? (
+                  <span className="block font-medium text-[#1e3a46]">early booking {formatEuro(childPriced.early)}</span>
+                ) : null}
+                {childPriced?.left != null ? (
+                  <span className="block font-medium text-[#1d6b45]">ostane {formatEuro(childPriced.left)}</span>
                 ) : null}
               </span>
             );
@@ -723,19 +763,25 @@ function PersonNet({
   amount,
   guests,
   commission,
+  earlyBooking,
 }: {
   amount: number | null;
   guests: number;
   commission: number | null;
+  earlyBooking: number | null;
 }) {
-  if (commission == null) return null;
+  if (commission == null && earlyBooking == null) return null;
   const each = pricePerPerson(amount, guests);
-  const left = netAfterCommission(each, commission);
-  if (each == null || left == null) return null;
+  const priced = afterDiscounts(each, earlyBooking, commission);
+  if (each == null) return null;
+  if (priced.early == null && priced.left == null) return null;
   return (
     <span className="mt-0.5 block text-right text-[11px] leading-tight text-muted-foreground">
       <span className="block">{formatEuro(each)} na osebo</span>
-      <span className="block font-medium text-[#1d6b45]">ostane {formatEuro(left)}</span>
+      {priced.early != null ? (
+        <span className="block font-medium text-[#1e3a46]">early booking {formatEuro(priced.early)}</span>
+      ) : null}
+      {priced.left != null ? <span className="block font-medium text-[#1d6b45]">ostane {formatEuro(priced.left)}</span> : null}
     </span>
   );
 }
@@ -831,6 +877,7 @@ function CompareCard({
   summary,
   capacity,
   commission,
+  earlyBooking,
   onChange,
   onReset,
 }: {
@@ -841,6 +888,7 @@ function CompareCard({
   summary: string;
   capacity: number;
   commission: number | null;
+  earlyBooking: number | null;
   onChange: (periodId: string, next: Money) => void;
   onReset: () => void;
 }) {
@@ -925,11 +973,11 @@ function CompareCard({
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <span className="tabular-nums whitespace-nowrap">{formatEuro(base.min)}</span>
-                    <PersonNet amount={base.min} guests={capacity} commission={commission} />
+                    <PersonNet amount={base.min} guests={capacity} commission={commission} earlyBooking={earlyBooking} />
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <span className="tabular-nums whitespace-nowrap">{formatEuro(base.max)}</span>
-                    <PersonNet amount={base.max} guests={capacity} commission={commission} />
+                    <PersonNet amount={base.max} guests={capacity} commission={commission} earlyBooking={earlyBooking} />
                   </td>
                   <td className={numCell}>{formatEuro(baseBand)}</td>
                   <td className={cn(bodyCell, "text-right")}>
@@ -943,7 +991,7 @@ function CompareCard({
                         pod {floor.amount} €, {floor.label}
                       </span>
                     ) : null}
-                    <PersonNet amount={next.min} guests={capacity} commission={commission} />
+                    <PersonNet amount={next.min} guests={capacity} commission={commission} earlyBooking={earlyBooking} />
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <EuroInput
@@ -951,7 +999,7 @@ function CompareCard({
                       value={next.max}
                       onChange={(max) => onChange(period.id, { ...next, max })}
                     />
-                    <PersonNet amount={next.max} guests={capacity} commission={commission} />
+                    <PersonNet amount={next.max} guests={capacity} commission={commission} earlyBooking={earlyBooking} />
                   </td>
                   <td className={numCell}>{formatEuro(nextBand)}</td>
                   <td className={numCell}>
@@ -1003,12 +1051,14 @@ function BeachCard({
   prices,
   capacity,
   commission,
+  earlyBooking,
   onChange,
   onReset,
 }: {
   prices: Record<string, Money>;
   capacity: number;
   commission: number | null;
+  earlyBooking: number | null;
   onChange: (periodId: string, next: Money) => void;
   onReset: () => void;
 }) {
@@ -1060,7 +1110,7 @@ function BeachCard({
                       pending={pending}
                       onChange={(min) => onChange(period.id, { ...price, min })}
                     />
-                    <PersonNet amount={price.min} guests={capacity} commission={commission} />
+                    <PersonNet amount={price.min} guests={capacity} commission={commission} earlyBooking={earlyBooking} />
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <EuroInput
@@ -1069,7 +1119,7 @@ function BeachCard({
                       pending={pending}
                       onChange={(max) => onChange(period.id, { ...price, max })}
                     />
-                    <PersonNet amount={price.max} guests={capacity} commission={commission} />
+                    <PersonNet amount={price.max} guests={capacity} commission={commission} earlyBooking={earlyBooking} />
                   </td>
                   <td className={numCell}>
                     {gap ? (

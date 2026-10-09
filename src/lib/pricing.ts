@@ -588,6 +588,7 @@ export function readCenik(
   web2027: PersonRates;
   webLift: WebLift;
   commission: WebLift;
+  earlyBooking: WebLift;
 } | null {
   if (!input || typeof input !== "object") return null;
   const envelope = input as {
@@ -597,6 +598,7 @@ export function readCenik(
     web2027?: unknown;
     webLift?: unknown;
     commission?: unknown;
+    earlyBooking?: unknown;
   };
   const pricesSource = "prices" in envelope ? envelope.prices : envelope;
   const prices = sanitizePrices(pricesSource);
@@ -605,7 +607,8 @@ export function readCenik(
   const web2027 = sanitizeWeb2027(envelope.web2027);
   const webLift = sanitizeWebLift(envelope.webLift);
   const commission = sanitizeCommission(envelope.commission);
-  if (!prices && !offers && !personRates && !web2027 && !webLift && !commission) return null;
+  const earlyBooking = sanitizeCommission(envelope.earlyBooking);
+  if (!prices && !offers && !personRates && !web2027 && !webLift && !commission && !earlyBooking) return null;
   return {
     prices: prices ?? clonePrices(),
     offers: offers ?? emptyOffers(),
@@ -613,6 +616,7 @@ export function readCenik(
     web2027: web2027 ?? emptyPersonRates(),
     webLift: webLift ?? emptyWebLift(),
     commission: commission ?? emptyWebLift(),
+    earlyBooking: earlyBooking ?? emptyWebLift(),
   };
 }
 
@@ -705,12 +709,23 @@ export function parseCommission(raw: string): number | null {
   return value;
 }
 
-/** Koliko ostane od zneska na osebo po proviziji agencije. */
+/** Koliko ostane od zneska na osebo po enem odstotku popusta ali provizije. */
 export function netAfterCommission(amount: number | null, percent: number | null): number | null {
   if (amount == null || percent == null || !Number.isFinite(percent)) return null;
   const next = Math.round(amount * (1 - percent / 100));
   if (next < 0 || next >= 1_000_000) return null;
   return next;
+}
+
+/** Early booking se odšteje najprej, provizija agencije od znižane cene. */
+export function afterDiscounts(
+  amount: number | null,
+  earlyBooking: number | null,
+  commission: number | null,
+): { early: number | null; left: number | null } {
+  const early = netAfterCommission(amount, earlyBooking);
+  const left = netAfterCommission(earlyBooking == null ? amount : early, commission);
+  return { early, left };
 }
 
 export function liftAmount(amount: number | null, percent: number): number | null {
