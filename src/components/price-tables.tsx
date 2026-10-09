@@ -270,27 +270,20 @@ export function PriceTables() {
           </div>
           <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
             Fiksne cene WEB so na noč za spletno stran. Pri I, II in III je ista cena tudi na
-            Bookingu, Airbnbju in Agodi. Polni penzion ni vključen. Za 2027 je ista tabela prazna,
-            da vpišeš nove cene. Vpis ostane v brskalniku.
+            Bookingu, Airbnbju in Agodi. Polni penzion ni vključen. Leto 2027 je v isti tabeli,
+            desno od trenutnih cen. Vpis ostane v brskalniku.
           </p>
         </div>
       </header>
 
       <main className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
-        <PersonRatesSection
-          rates={cenik.personRates}
-          onChange={setPersonRate}
-          onReset={resetPersonRate}
-        />
-        <PersonRatesSection
-          id="web-2027"
-          title="Fiksne cene WEB 2027"
-          intro="Ista obdobja in ista pravila popusta, premaknjena v leto 2027. Celice so prazne, da vpišeš cene."
-          year={2027}
-          blank
-          rates={cenik.web2027}
-          onChange={setWeb2027}
-          onReset={resetWeb2027}
+        <WebCompareSection
+          current={cenik.personRates}
+          next={cenik.web2027}
+          onChangeCurrent={setPersonRate}
+          onChangeNext={setWeb2027}
+          onResetCurrent={resetPersonRate}
+          onResetNext={resetWeb2027}
         />
 
         <Rules />
@@ -342,82 +335,88 @@ export function PriceTables() {
   );
 }
 
-function PersonRatesSection({
-  id = "osebe",
-  title = "Fiksne cene WEB",
-  intro = "Cena na noč. Pri I, II in III je enaka na spletni strani, Bookingu, Airbnbju in Agodi. Beach Villa ima ceno samo na spletni strani. 9. 7.–13. 7. je v pomladi in v poletju.",
-  year,
-  blank = false,
-  rates,
-  onChange,
-  onReset,
+function WebCompareSection({
+  current,
+  next,
+  onChangeCurrent,
+  onChangeNext,
+  onResetCurrent,
+  onResetNext,
 }: {
-  id?: string;
-  title?: string;
-  intro?: string;
-  year?: number;
-  blank?: boolean;
-  rates: PersonRates;
-  onChange: (unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
-  onReset: (unitId: string) => void;
+  current: PersonRates;
+  next: PersonRates;
+  onChangeCurrent: (unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
+  onChangeNext: (unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
+  onResetCurrent: (unitId: string) => void;
+  onResetNext: (unitId: string) => void;
 }) {
   return (
-    <section id={id} className="flex w-full min-w-0 scroll-mt-6 flex-col gap-5">
+    <section id="web-2027" className="flex w-full min-w-0 scroll-mt-6 flex-col gap-5">
       <div>
-        <h2 className="font-heading text-2xl tracking-tight">{title}</h2>
-        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">{intro}</p>
+        <h2 className="font-heading text-2xl tracking-tight">Fiksne cene WEB</h2>
+        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Trenutna cena in leto 2027 sta v isti vrstici. Pri I, II in III je trenutna cena enaka na
+          spletni strani, Bookingu, Airbnbju in Agodi. Beach Villa je samo na spletni strani. Prazniki
+          2027 trajajo do 10. 1. 2028.
+        </p>
       </div>
       {PERSON_RATE_CARDS.map((card) => (
-        <PersonRateCard
+        <WebCompareCard
           key={card.id}
           unitId={card.id}
-          rows={rates[card.id]}
-          year={year}
-          blank={blank}
-          onChange={(seasonId, guests, amount) => onChange(card.id, seasonId, guests, amount)}
-          onReset={() => onReset(card.id)}
+          current={current[card.id]}
+          next={next[card.id]}
+          onChangeCurrent={(seasonId, guests, amount) => onChangeCurrent(card.id, seasonId, guests, amount)}
+          onChangeNext={(seasonId, guests, amount) => onChangeNext(card.id, seasonId, guests, amount)}
+          onResetCurrent={() => onResetCurrent(card.id)}
+          onResetNext={() => onResetNext(card.id)}
         />
       ))}
     </section>
   );
 }
 
-function PersonRateCard({
+function WebCompareCard({
   unitId,
-  rows,
-  year,
-  blank = false,
-  onChange,
-  onReset,
+  current,
+  next,
+  onChangeCurrent,
+  onChangeNext,
+  onResetCurrent,
+  onResetNext,
 }: {
   unitId: string;
-  rows: PersonRates[string];
-  year?: number;
-  blank?: boolean;
-  onChange: (seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
-  onReset: () => void;
+  current: PersonRates[string];
+  next: PersonRates[string];
+  onChangeCurrent: (seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
+  onChangeNext: (seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
+  onResetCurrent: () => void;
+  onResetNext: () => void;
 }) {
   const card = personRateCard(unitId);
-  if (!card || !rows) return null;
+  if (!card || !current || !next) return null;
   const guests = personColumns(card.capacity);
-  const changed = PERSON_SEASONS.some((season) =>
-    guests.some((count) =>
-      blank ? rows[season.id]?.[count] != null : rows[season.id]?.[count] !== card.seasons[season.id][count],
-    ),
+  const currentChanged = PERSON_SEASONS.some((season) =>
+    guests.some((count) => current[season.id]?.[count] !== card.seasons[season.id][count]),
   );
-  const periodWidth = year ? 40 : 34;
-  const guestWidth = `${(100 - periodWidth) / guests.length}%`;
+  const nextChanged = webYearFilled(next, guests);
+  const priceWidth = `${(100 - 18) / (guests.length * 2)}%`;
 
   return (
-    <article className="w-fit max-w-full min-w-0 overflow-hidden rounded-2xl ring-1 ring-foreground/10">
+    <article className="w-full min-w-0 overflow-hidden rounded-2xl ring-1 ring-foreground/10">
       <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1c1915] px-4 py-3 text-[#f6f1e7]">
         <div>
           <h3 className="font-heading text-lg tracking-tight">{card.name}</h3>
           <p className="text-xs text-white/70">{card.detail}</p>
         </div>
-        <Button size="sm" variant="secondary" disabled={!changed} onClick={onReset}>
-          {blank ? "Počisti" : "Ponastavi"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="secondary" disabled={!currentChanged} onClick={onResetCurrent}>
+            Ponastavi WEB
+          </Button>
+          <Button size="sm" variant="secondary" disabled={!nextChanged} onClick={onResetNext}>
+            Počisti 2027
+          </Button>
+        </div>
       </div>
       <p className="bg-[#f8f1e4] px-4 py-2.5 text-sm leading-relaxed text-[#3f3424]">
         {discountSentence(card)}
@@ -425,20 +424,38 @@ function PersonRateCard({
       </p>
       <div className="max-w-full overflow-x-auto bg-card">
         <table
-          className="table-fixed border-collapse text-sm"
-          style={{ width: `${(year ? 340 : 260) + guests.length * 150}px` }}
+          className="w-full table-fixed border-collapse text-sm"
+          style={{ minWidth: `${200 + guests.length * 168}px` }}
         >
           <colgroup>
-            <col style={{ width: `${periodWidth}%` }} />
+            <col className="w-[18%]" />
             {guests.map((count) => (
-              <col key={count} style={{ width: guestWidth }} />
+              <col key={`web-${count}`} style={{ width: priceWidth }} />
+            ))}
+            {guests.map((count) => (
+              <col key={`next-${count}`} style={{ width: priceWidth }} />
             ))}
           </colgroup>
           <thead>
             <tr className="text-xs tracking-wide text-[#5c5142] uppercase">
-              <th className={cn(headCell, "bg-[#efe6d4] text-left")}>Obdobje</th>
+              <th rowSpan={2} className={cn(headCell, "bg-[#efe6d4] text-left")}>
+                Obdobje
+              </th>
+              <th colSpan={guests.length} className={cn(headCell, "bg-[#e4eef2] text-center")}>
+                WEB
+              </th>
+              <th colSpan={guests.length} className={cn(headCell, "bg-[#f3e6c8] text-center")}>
+                2027
+              </th>
+            </tr>
+            <tr className="text-xs tracking-wide text-[#5c5142] uppercase">
               {guests.map((count) => (
-                <th key={count} className={cn(headCell, "bg-[#e3efe4] text-right")}>
+                <th key={`web-${count}`} className={cn(headCell, "bg-[#e4eef2] text-right")}>
+                  {guestLabel(count)}
+                </th>
+              ))}
+              {guests.map((count) => (
+                <th key={`next-${count}`} className={cn(headCell, "bg-[#f3e6c8] text-right")}>
                   {guestLabel(count)}
                 </th>
               ))}
@@ -451,20 +468,37 @@ function PersonRateCard({
                   <span className="font-medium">{season.label}</span>
                   {season.ranges.map((range) => (
                     <span key={`${range.from}-${range.to}`} className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
-                      {formatSeasonRange(range.from, range.to, year)}
+                      {formatSeasonRange(range.from, range.to)}
                     </span>
                   ))}
                 </td>
                 {guests.map((count) => (
-                  <td key={count} className={cn(bodyCell, "text-right")}>
+                  <td key={`web-${count}`} className={cn(bodyCell, "text-right")}>
                     <EuroInput
-                      label={`${card.name}, ${year ?? "WEB"}, ${season.label}, ${guestLabel(count)}`}
-                      value={rows[season.id]?.[count] ?? null}
-                      pending={blank && rows[season.id]?.[count] == null}
-                      onChange={(amount) => onChange(season.id, count, amount)}
+                      label={`${card.name}, WEB, ${season.label}, ${guestLabel(count)}`}
+                      value={current[season.id]?.[count] ?? null}
+                      onChange={(amount) => onChangeCurrent(season.id, count, amount)}
                     />
                   </td>
                 ))}
+                {guests.map((count) => {
+                  const amount = next[season.id]?.[count] ?? null;
+                  return (
+                    <td key={`next-${count}`} className={cn(bodyCell, "text-right")}>
+                      <EuroInput
+                        label={`${card.name}, 2027, ${season.label}, ${guestLabel(count)}`}
+                        value={amount}
+                        pending={amount == null}
+                        onChange={(value) => onChangeNext(season.id, count, value)}
+                      />
+                      {amount != null ? (
+                        <span className="mt-1 block text-xs">
+                          <Delta base={current[season.id]?.[count] ?? null} next={amount} />
+                        </span>
+                      ) : null}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
@@ -472,6 +506,10 @@ function PersonRateCard({
       </div>
     </article>
   );
+}
+
+function webYearFilled(rows: PersonRates[string], guests: number[]): boolean {
+  return PERSON_SEASONS.some((season) => guests.some((count) => rows[season.id]?.[count] != null));
 }
 
 function Rules() {
