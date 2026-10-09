@@ -14,21 +14,27 @@ import {
   RATES_2026,
   SEASON_LABEL,
   type Money,
+  type Offers,
+  type Prices,
   clonePrices,
   datesDiffer,
+  emptyOffers,
   floor2026,
   formatDate,
   formatEuro,
   formatPercent,
+  guestCounts,
+  guestLabel,
   priceDelta,
+  readCenik,
   sameMoney,
-  sanitizePrices,
+  segmentLabel,
   spread,
 } from "@/lib/pricing";
 
 const STORAGE_KEY = "komba-cabana-cenik-v1";
 
-type Prices = Record<string, Record<string, Money>>;
+type Cenik = { prices: Prices; offers: Offers };
 
 const SEASON_SOFT: Record<string, string> = {
   zima: "bg-[#f3f7f9]",
@@ -45,15 +51,17 @@ function readStore(): string | null {
   return localStorage.getItem(STORAGE_KEY);
 }
 
-function parsePrices(raw: string | null): Prices | null {
+function parseCenik(raw: string | null): Cenik | null {
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as { prices?: unknown };
-    const source = parsed && typeof parsed === "object" && "prices" in parsed ? parsed.prices : parsed;
-    return sanitizePrices(source);
+    return readCenik(JSON.parse(raw));
   } catch {
     return null;
   }
+}
+
+function blankCenik(): Cenik {
+  return { prices: clonePrices(), offers: emptyOffers() };
 }
 
 function EuroInput({
@@ -145,28 +153,61 @@ function shiftSentence(unitId: string, prices: Prices): string {
 
 export function PriceTables() {
   const storedRaw = useSyncExternalStore(subscribeStore, readStore, () => null);
-  const stored = useMemo(() => parsePrices(storedRaw), [storedRaw]);
-  const [draft, setDraft] = useState<Prices | null>(null);
-  const prices = draft ?? stored ?? clonePrices();
+  const stored = useMemo(() => parseCenik(storedRaw), [storedRaw]);
+  const [draft, setDraft] = useState<Cenik | null>(null);
+  const cenik = draft ?? stored ?? blankCenik();
+  const prices = cenik.prices;
 
-  function commit(next: Prices) {
+  function commit(next: Cenik) {
     setDraft(next);
-    const previous = parsePrices(localStorage.getItem(STORAGE_KEY));
-    const payload = previous ? { ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"), prices: next } : { prices: next };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    let envelope: Record<string, unknown> = {};
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) envelope = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      envelope = {};
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...envelope, prices: next.prices, offers: next.offers }));
   }
 
   function setPrice(unitId: string, periodId: string, next: Money) {
     commit({
-      ...prices,
-      [unitId]: { ...prices[unitId], [periodId]: next },
+      ...cenik,
+      prices: {
+        ...prices,
+        [unitId]: { ...prices[unitId], [periodId]: next },
+      },
     });
   }
 
   function resetUnit(unitId: string) {
     commit({
-      ...prices,
-      [unitId]: Object.fromEntries(PERIODS.map((period) => [period.id, { ...OPTIMA_PRICES[unitId][period.id] }])),
+      ...cenik,
+      prices: {
+        ...prices,
+        [unitId]: Object.fromEntries(PERIODS.map((period) => [period.id, { ...OPTIMA_PRICES[unitId][period.id] }])),
+      },
+    });
+  }
+
+  function setOffer(unitId: string, periodId: string, guests: number, amount: number | null) {
+    const row = cenik.offers[unitId][periodId];
+    commit({
+      ...cenik,
+      offers: {
+        ...cenik.offers,
+        [unitId]: {
+          ...cenik.offers[unitId],
+          [periodId]: { ...row, [guests]: amount },
+        },
+      },
+    });
+  }
+
+  function resetOffers(unitId: string) {
+    commit({
+      ...cenik,
+      offers: { ...cenik.offers, [unitId]: emptyOffers()[unitId] },
     });
   }
 
@@ -184,32 +225,38 @@ export function PriceTables() {
               <h1 className="font-heading mt-2 text-4xl tracking-tight md:text-5xl">Kalkulacije cen</h1>
             </div>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Izhodišče 2026
+              Variabilne cene za Booking in Airbnb
               <br />
-              Predlog Optima Plus 2027
+              Ponudbe za 1, 2, 3 ali 4 osebe
             </p>
           </div>
           <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
-            Cene so na noč, v evrih, bruto in pri polni kapaciteti. To je prodajna cena, ki jo plača
-            gost. Izhodišče 2026 je brez Beach Ville. Predlog 2027 popraviš kar v tabeli. Sprememba
-            je predlog 2027 proti izhodišču 2026.
+            Variabilne cene so razpon na noč za Booking in Airbnb, bruto in pri polni kapaciteti.
+            Ponudba, ki jo pošlješ sama, ima eno ceno na noč za izbrano število oseb. Oboje vpišeš v
+            tabelo. Vpis ostane v brskalniku.
           </p>
         </div>
       </header>
 
       <main className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
+        <OffersSection
+          offers={cenik.offers}
+          onChange={setOffer}
+          onReset={resetOffers}
+        />
+
         <Rules />
 
         <section id="primerjava" className="flex w-full min-w-0 scroll-mt-6 flex-col gap-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="font-heading text-2xl tracking-tight">2026 proti 2027</h2>
+              <h2 className="font-heading text-2xl tracking-tight">Variabilne cene · Booking in Airbnb</h2>
               <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
                 Zimski december 2026 traja do 18. 12. V predlogu 2027 traja do 27. 12. in se od
                 19. 12. prekriva s prazniki.
               </p>
             </div>
-            <Button variant="outline" disabled={!dirty} onClick={() => commit(clonePrices())}>
+            <Button variant="outline" disabled={!dirty} onClick={() => commit({ ...cenik, prices: clonePrices() })}>
               Ponastavi predlog 2027
             </Button>
           </div>
@@ -230,9 +277,10 @@ export function PriceTables() {
 
         <section className="flex w-full min-w-0 flex-col gap-4">
           <div>
-            <h2 className="font-heading text-2xl tracking-tight">Beach Villa IV</h2>
+            <h2 className="font-heading text-2xl tracking-tight">Beach Villa IV · variabilna cena</h2>
             <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              V izhodišču 2026 je ni. Obdobja so enaka kot pri ostalih bungalovih v predlogu 2027.
+              Razpon za Booking in Airbnb. V izhodišču 2026 je ni. Obdobja so enaka kot pri ostalih
+              bungalovih v predlogu 2027.
             </p>
           </div>
           <BeachCard
@@ -243,6 +291,122 @@ export function PriceTables() {
         </section>
       </main>
     </div>
+  );
+}
+
+function OffersSection({
+  offers,
+  onChange,
+  onReset,
+}: {
+  offers: Offers;
+  onChange: (unitId: string, periodId: string, guests: number, amount: number | null) => void;
+  onReset: (unitId: string) => void;
+}) {
+  return (
+    <section id="ponudbe" className="flex w-full min-w-0 scroll-mt-6 flex-col gap-5">
+      <div>
+        <h2 className="font-heading text-2xl tracking-tight">Ponudbe</h2>
+        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Ena cena na noč za število oseb v ponudbi. Obdobja so enaka kot pri predlogu 2027.
+          Bungalov II in III sprejmeta do 2 osebi, Bungalov I in Beach Villa do 4.
+        </p>
+      </div>
+      {COMPARE_UNITS.map((unit) => (
+        <OfferCard
+          key={unit.id}
+          unitId={unit.id}
+          name={unit.name}
+          detail={offerDetail(unit.id)}
+          rows={offers[unit.id]}
+          onChange={(periodId, guests, amount) => onChange(unit.id, periodId, guests, amount)}
+          onReset={() => onReset(unit.id)}
+        />
+      ))}
+    </section>
+  );
+}
+
+function OfferCard({
+  unitId,
+  name,
+  detail,
+  rows,
+  onChange,
+  onReset,
+}: {
+  unitId: string;
+  name: string;
+  detail: string;
+  rows: Offers[string];
+  onChange: (periodId: string, guests: number, amount: number | null) => void;
+  onReset: () => void;
+}) {
+  const guests = guestCounts(unitId);
+  const filled = COMPARE_PERIODS.some((period) => guests.some((count) => rows[period.id]?.[count] != null));
+  const periodWidth = guests.length > 2 ? 28 : 36;
+  const guestWidth = `${(100 - periodWidth) / guests.length}%`;
+
+  return (
+    <article className="w-fit max-w-full min-w-0 overflow-hidden rounded-2xl ring-1 ring-foreground/10">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1c1915] px-4 py-3 text-[#f6f1e7]">
+        <div>
+          <h3 className="font-heading text-lg tracking-tight">{name}</h3>
+          <p className="text-xs text-white/70">{detail}</p>
+        </div>
+        <Button size="sm" variant="secondary" disabled={!filled} onClick={onReset}>
+          Počisti
+        </Button>
+      </div>
+      <div className="max-w-full overflow-x-auto bg-card">
+        <table
+          className="table-fixed border-collapse text-sm"
+          style={{ width: `${210 + guests.length * 180}px` }}
+        >
+          <colgroup>
+            <col style={{ width: `${periodWidth}%` }} />
+            {guests.map((count) => (
+              <col key={count} style={{ width: guestWidth }} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr className="text-xs tracking-wide text-[#5c5142] uppercase">
+              <th className={cn(headCell, "bg-[#efe6d4] text-left")}>Obdobje</th>
+              {guests.map((count) => (
+                <th key={count} className={cn(headCell, "bg-[#e3efe4] text-right")}>
+                  {guestLabel(count)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {COMPARE_PERIODS.map((period) => {
+              const tone = period.id === "prazniki" ? "poletje-december" : period.season;
+              return (
+                <tr key={period.id} className={SEASON_SOFT[tone]}>
+                  <td className={cn(bodyCell, "text-left")}>
+                    <span className="font-medium">{periodTitle(period.id)}</span>
+                    <span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
+                      {dayMonth(period.from2027)} – {dayMonth(period.to2027)}
+                    </span>
+                  </td>
+                  {guests.map((count) => (
+                    <td key={count} className={cn(bodyCell, "text-right")}>
+                      <EuroInput
+                        label={`${name}, ${periodTitle(period.id)}, ${guestLabel(count)}`}
+                        value={rows[period.id]?.[count] ?? null}
+                        pending={rows[period.id]?.[count] == null}
+                        onChange={(amount) => onChange(period.id, count, amount)}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </article>
   );
 }
 
@@ -462,6 +626,18 @@ function CompareCard({
 const headCell = "border border-[#e4d8c4] px-2 py-1.5 font-medium";
 const bodyCell = "border border-[#e4d8c4] px-2 py-1.5 align-middle";
 const numCell = "border border-[#e4d8c4] px-2 py-1.5 text-right align-middle tabular-nums whitespace-nowrap";
+
+function offerDetail(unitId: string): string {
+  const place = unitId === "garden-3" ? "Garden" : unitId === "beach-4" ? "Beach Villa" : "Ocean";
+  const capacity = guestCounts(unitId).at(-1) ?? 1;
+  const people = capacity === 2 ? "do 2 oseb" : `do ${capacity} oseb`;
+  return `${place} · ${people}`;
+}
+
+function periodTitle(periodId: string): string {
+  const period = PERIODS.find((item) => item.id === periodId);
+  return period ? segmentLabel(period) : periodId;
+}
 
 function dayMonth(iso: string): string {
   const [, month, day] = iso.split("-");

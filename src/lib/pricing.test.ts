@@ -15,6 +15,10 @@ import {
   quoteStay,
   resolvePeriod,
   resolvedSegments,
+  emptyOffers,
+  guestCounts,
+  readCenik,
+  sanitizeOffers,
   sanitizePrices,
 } from "./pricing";
 
@@ -163,5 +167,34 @@ describe("shranjene cene", () => {
     assert.deepEqual(parsed["beach-4"]["poletje-1"], { min: 400, max: 520 });
     assert.deepEqual(parsed["beach-4"]["zima-1"], { min: null, max: null });
     assert.deepEqual(parsed["ocean-1"]["zima-1"], { min: 560, max: 675 });
+  });
+
+  it("ponudbo shrani po osebah in prezre kapaciteto čez bungalov", () => {
+    assert.deepEqual(guestCounts("ocean-1"), [1, 2, 3, 4]);
+    assert.deepEqual(guestCounts("ocean-2"), [1, 2]);
+    assert.equal(emptyOffers()["garden-3"]["zima-1"][2], null);
+    const offers = sanitizeOffers({
+      "ocean-1": { "poletje-1": { "1": 480, "4": 753, "5": 900 } },
+      "ocean-2": { "zima-1": { "2": 300, "4": 800, "1": "drago" } },
+    });
+    assert.ok(offers);
+    assert.equal(offers["ocean-1"]["poletje-1"][1], 480);
+    assert.equal(offers["ocean-1"]["poletje-1"][4], 753);
+    assert.equal(offers["ocean-1"]["poletje-1"][2], null);
+    assert.equal(offers["ocean-2"]["zima-1"][2], 300);
+    assert.equal(offers["ocean-2"]["zima-1"][1], null);
+    assert.equal(Object.hasOwn(offers["ocean-2"]["zima-1"], 4), false);
+  });
+
+  it("star cenik brez ponudb ostane, ponudbe se dodajo zraven", () => {
+    const cenik = readCenik({
+      prices: { "beach-4": { "zima-1": { min: 300, max: 400 } } },
+      offers: { "beach-4": { "zima-1": { "3": 360 } } },
+    });
+    assert.ok(cenik);
+    assert.deepEqual(cenik.prices["beach-4"]["zima-1"], { min: 300, max: 400 });
+    assert.deepEqual(cenik.prices["ocean-1"]["zima-1"], { min: 560, max: 675 });
+    assert.equal(cenik.offers["beach-4"]["zima-1"][3], 360);
+    assert.equal(cenik.offers["ocean-1"]["poletje-1"][4], null);
   });
 });

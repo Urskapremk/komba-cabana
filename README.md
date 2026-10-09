@@ -1,8 +1,10 @@
 # Kalkulacije cen · Komba Cabana
 
-Tabele za primerjavo izhodišča 2026 in predloga Optima Plus za 2027. Cene so na noč, bruto, pri polni kapaciteti.
+Dve tabeli cen na noč.
 
-Bungalov I, II in III imajo obe leti. Beach Villa IV v letu 2026 ni bila v ceniku. Predlog 2027 lahko popraviš v tabeli. Sprememba je razlika proti letu 2026. Vpis ostane v brskalniku.
+Variabilne cene so razpon min in max za Booking in Airbnb, bruto, pri polni kapaciteti. Izhodišče 2026 stoji ob predlogu Optima Plus za 2027. Beach Villa IV v letu 2026 ni bila v ceniku.
+
+Ponudbe so cene, ki jih vpišeš sama, ko pošlješ ponudbo: ena cena za 1, 2, 3 ali 4 osebe, po istih obdobjih. Bungalov II in III sprejmeta do 2 osebi. Vpis ostane v brskalniku.
 
 Zraven sta minimalne cene in pravila gap filla iz pisma za 2026.
 

@@ -277,7 +277,45 @@ export function resolvedSegments(rule: OverlapRule): CalendarSegment[] {
   return segments;
 }
 
-export function clonePrices(): Record<string, Record<string, Money>> {
+export type Prices = Record<string, Record<string, Money>>;
+
+/** Koliko oseb sprejme bungalov v lastni ponudbi. II in III sta 2+0, I in Beach Villa do 4. */
+export const OFFER_CAPACITY: Record<string, number> = {
+  "ocean-1": 4,
+  "ocean-2": 2,
+  "garden-3": 2,
+  "beach-4": 4,
+};
+
+export type OfferRow = Record<number, number | null>;
+export type Offers = Record<string, Record<string, OfferRow>>;
+
+export function guestCounts(unitId: string): number[] {
+  const capacity = OFFER_CAPACITY[unitId] ?? 1;
+  return Array.from({ length: capacity }, (_, index) => index + 1);
+}
+
+export function guestLabel(count: number): string {
+  if (count === 1) return "1 oseba";
+  if (count === 2) return "2 osebi";
+  return `${count} osebe`;
+}
+
+export function emptyOffers(): Offers {
+  return Object.fromEntries(
+    BUNGALOWS.map((bungalow) => [
+      bungalow.id,
+      Object.fromEntries(
+        PERIODS.map((period) => [
+          period.id,
+          Object.fromEntries(guestCounts(bungalow.id).map((count) => [count, null])),
+        ]),
+      ),
+    ]),
+  );
+}
+
+export function clonePrices(): Prices {
   return Object.fromEntries(
     BUNGALOWS.map((bungalow) => [
       bungalow.id,
@@ -300,7 +338,39 @@ function sanitizeAmount(value: unknown): number | null | undefined {
   return undefined;
 }
 
-export function sanitizePrices(input: unknown): Record<string, Record<string, Money>> | null {
+export function sanitizeOffers(input: unknown): Offers | null {
+  if (!input || typeof input !== "object") return null;
+  const source = input as Record<string, unknown>;
+  const next = emptyOffers();
+  let recognized = false;
+  for (const bungalow of BUNGALOWS) {
+    const row = source[bungalow.id];
+    if (!row || typeof row !== "object") continue;
+    recognized = true;
+    for (const period of PERIODS) {
+      const cell = (row as Record<string, unknown>)[period.id];
+      if (!cell || typeof cell !== "object") continue;
+      for (const count of guestCounts(bungalow.id)) {
+        const amount = sanitizeAmount((cell as Record<string, unknown>)[String(count)]);
+        if (amount === undefined) continue;
+        next[bungalow.id][period.id][count] = amount;
+      }
+    }
+  }
+  return recognized ? next : null;
+}
+
+export function readCenik(input: unknown): { prices: Prices; offers: Offers } | null {
+  if (!input || typeof input !== "object") return null;
+  const envelope = input as { prices?: unknown; offers?: unknown };
+  const pricesSource = "prices" in envelope ? envelope.prices : envelope;
+  const prices = sanitizePrices(pricesSource);
+  const offers = sanitizeOffers(envelope.offers);
+  if (!prices && !offers) return null;
+  return { prices: prices ?? clonePrices(), offers: offers ?? emptyOffers() };
+}
+
+export function sanitizePrices(input: unknown): Prices | null {
   if (!input || typeof input !== "object") return null;
   const source = input as Record<string, unknown>;
   const next = clonePrices();
