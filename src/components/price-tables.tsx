@@ -34,6 +34,7 @@ import {
   guestLabel,
   personColumns,
   personRateCard,
+  pricePerPerson,
   priceDelta,
   readCenik,
   sameMoney,
@@ -357,8 +358,8 @@ function WebCompareSection({
         <h2 className="font-heading text-2xl tracking-tight">Fiksne cene WEB</h2>
         <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Trenutna cena in leto 2027 sta v isti vrstici. Pri I, II in III je trenutna cena enaka na
-          spletni strani, Bookingu, Airbnbju in Agodi. Beach Villa je samo na spletni strani. Prazniki
-          2027 trajajo do 10. 1. 2028.
+          spletni strani, Bookingu, Airbnbju in Agodi. Beach Villa je samo na spletni strani. Pod
+          ceno bungalova je preračun na osebo. Prazniki 2027 trajajo do 10. 1. 2028.
         </p>
       </div>
       {PERSON_RATE_CARDS.map((card) => (
@@ -470,15 +471,19 @@ function WebCompareCard({
                     </span>
                   ))}
                 </td>
-                {guests.map((count) => (
-                  <td key={`web-${count}`} className={cn(bodyCell, "text-right")}>
-                    <EuroInput
-                      label={`${card.name}, WEB, ${season.label}, ${guestLabel(count)}`}
-                      value={current[season.id]?.[count] ?? null}
-                      onChange={(amount) => onChangeCurrent(season.id, count, amount)}
-                    />
-                  </td>
-                ))}
+                {guests.map((count) => {
+                  const amount = current[season.id]?.[count] ?? null;
+                  return (
+                    <td key={`web-${count}`} className={cn(bodyCell, "text-right")}>
+                      <EuroInput
+                        label={`${card.name}, WEB, ${season.label}, ${guestLabel(count)}`}
+                        value={amount}
+                        onChange={(value) => onChangeCurrent(season.id, count, value)}
+                      />
+                      <PerPerson amount={amount} guests={count} />
+                    </td>
+                  );
+                })}
                 {guests.map((count) => {
                   const amount = next[season.id]?.[count] ?? null;
                   return (
@@ -489,8 +494,9 @@ function WebCompareCard({
                         pending={amount == null}
                         onChange={(value) => onChangeNext(season.id, count, value)}
                       />
+                      <PerPerson amount={amount} guests={count} />
                       {amount != null ? (
-                        <span className="mt-1 block text-xs">
+                        <span className="mt-0.5 block text-xs">
                           <Delta base={current[season.id]?.[count] ?? null} next={amount} />
                         </span>
                       ) : null}
@@ -503,6 +509,17 @@ function WebCompareCard({
         </table>
       </div>
     </article>
+  );
+}
+
+function PerPerson({ amount, guests }: { amount: number | null; guests: number }) {
+  const each = pricePerPerson(amount, guests);
+  if (each == null) return null;
+  return (
+    <span className="mt-0.5 block text-right text-[11px] leading-tight text-muted-foreground tabular-nums">
+      {formatEuro(each)}
+      <span className="block">na osebo</span>
+    </span>
   );
 }
 

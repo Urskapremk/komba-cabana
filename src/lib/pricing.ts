@@ -607,6 +607,11 @@ export function formatDate(iso: string): string {
   }).format(parseISODate(iso));
 }
 
+export function pricePerPerson(amount: number | null, guests: number): number | null {
+  if (amount == null || guests <= 0) return null;
+  return Math.round(amount / guests);
+}
+
 export function formatEuro(value: number | null): string {
   if (value === null || Number.isNaN(value)) return "—";
   return new Intl.NumberFormat("sl-SI", {

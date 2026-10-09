@@ -21,6 +21,7 @@ import {
   emptyOffers,
   guestCounts,
   personRateCard,
+  pricePerPerson,
   readCenik,
   sanitizeOffers,
   sanitizePrices,
@@ -252,6 +253,15 @@ describe("cene po osebah", () => {
     assert.equal(beach?.discount, 90);
     assert.equal(JSON.stringify(PERSON_RATE_CARDS).includes("534"), false);
     assert.equal(JSON.stringify(PERSON_RATE_CARDS).includes("590"), false);
+  });
+
+  it("ceno bungalova deli na osebo", () => {
+    assert.equal(pricePerPerson(560, 4), 140);
+    assert.equal(pricePerPerson(490, 3), 163);
+    assert.equal(pricePerPerson(420, 2), 210);
+    assert.equal(pricePerPerson(420, 1), 420);
+    assert.equal(pricePerPerson(670, 4), 168);
+    assert.equal(pricePerPerson(null, 4), null);
   });
 
   it("obdobja kanala se stikajo, julij 9.–13. je v dveh sezonah", () => {
