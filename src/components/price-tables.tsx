@@ -531,6 +531,10 @@ function WebCompareCard({
           action="Izračunaj"
           parse={parseCommission}
         />
+        <p className="w-full text-xs leading-relaxed text-[#1e3a46]">
+          Ostanek = polna cena − agencija − early booking. Oba odbitka sta od polne cene. V celici je
+          najprej bungalov, spodaj ista računica na osebo.
+        </p>
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#e4d8c4] bg-[#f3e6c8] px-4 py-2">
         {linkedToFamily ? (
@@ -607,6 +611,14 @@ function WebCompareCard({
                         value={amount}
                         onChange={(value) => onChangeCurrent(season.id, count, value)}
                       />
+                      {amount != null ? (
+                        <DiscountLines
+                          amount={amount}
+                          commission={commission}
+                          earlyBooking={earlyBooking}
+                          who="za bungalov"
+                        />
+                      ) : null}
                       <PerPerson amount={amount} guests={count} commission={commission} earlyBooking={earlyBooking} />
                     </td>
                   );
@@ -622,6 +634,14 @@ function WebCompareCard({
                         readOnly={linkedToFamily}
                         onChange={(value) => onChangeNext(season.id, count, value)}
                       />
+                      {amount != null ? (
+                        <DiscountLines
+                          amount={amount}
+                          commission={commission}
+                          earlyBooking={earlyBooking}
+                          who="za bungalov"
+                        />
+                      ) : null}
                       <PerPerson amount={amount} guests={count} commission={commission} earlyBooking={earlyBooking} floor2027 />
                       {amount != null ? (
                         <span className="mt-0.5 block text-xs">
@@ -729,7 +749,12 @@ function PerPerson({
       {formatEuro(each)}
       <span className="block">na osebo</span>
       <span className="block">cena za odraslo osebo</span>
-      <DiscountLines amount={each} commission={commission ?? null} earlyBooking={earlyBooking ?? null} />
+      <DiscountLines
+        amount={each}
+        commission={commission ?? null}
+        earlyBooking={earlyBooking ?? null}
+        who="na osebo"
+      />
       {underFloor ? (
         <span className="block font-medium text-[#8a3b28]">pod minimumom {PERSON_FLOOR_2027} €</span>
       ) : null}
@@ -753,15 +778,19 @@ function DiscountLines({
   amount,
   commission,
   earlyBooking,
+  who,
 }: {
   amount: number;
   commission: number | null;
   earlyBooking: number | null;
+  who?: string;
 }) {
   const priced = afterDiscounts(amount, earlyBooking, commission);
-  if (priced.agency == null && priced.early == null) return null;
+  if ((priced.agency == null && priced.early == null) || priced.left == null) return null;
+  const both = priced.agency != null && priced.early != null;
   return (
     <span className="mt-1 block border-t border-[#e4d8c4] pt-1">
+      {who ? <span className="block">{who}</span> : null}
       <span className="block">polna cena {formatEuro(amount)}</span>
       {priced.agency != null ? (
         <span className="block font-medium text-[#6b3058]">− agencija {formatEuro(priced.agency)}</span>
@@ -769,7 +798,9 @@ function DiscountLines({
       {priced.early != null ? (
         <span className="block font-medium text-[#1e3a46]">− early booking {formatEuro(priced.early)}</span>
       ) : null}
-      {priced.left != null ? <span className="block font-medium text-[#1c1915]">ostane {formatEuro(priced.left)}</span> : null}
+      <span className="block font-medium text-[#1c1915]">
+        {both ? "ostane po obeh" : "ostane"} {formatEuro(priced.left)}
+      </span>
     </span>
   );
 }
@@ -790,8 +821,7 @@ function PersonNet({
   if (each == null) return null;
   return (
     <span className="mt-0.5 block text-right text-[11px] leading-tight text-muted-foreground">
-      <span className="block">{formatEuro(each)} na osebo</span>
-      <DiscountLines amount={each} commission={commission} earlyBooking={earlyBooking} />
+      <DiscountLines amount={each} commission={commission} earlyBooking={earlyBooking} who="na osebo" />
     </span>
   );
 }
