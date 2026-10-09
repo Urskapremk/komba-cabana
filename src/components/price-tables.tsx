@@ -319,120 +319,87 @@ export function PriceTables() {
             </p>
           </div>
           <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
-            Fiksne cene WEB so na noč za spletno stran. Pri I, II in III je ista cena tudi na
-            Bookingu, Airbnbju in Agodi. Polni penzion ni vključen. Leto 2027 je v isti tabeli,
-            desno od trenutnih cen. Odstotek dvigne vse cene bungalova. Vpis ostane v brskalniku.
+            Pri vsakem bungalovu so najprej fiksne cene WEB, pod njimi variabilne. Fiksne cene so na
+            noč za spletno stran. Pri I, II in III je ista cena tudi na Bookingu, Airbnbju in Agodi.
+            Polni penzion ni vključen. Leto 2027 je v isti tabeli, desno od trenutnih cen. Vpis ostane
+            v brskalniku.
           </p>
         </div>
       </header>
 
-      <main className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
-        <WebCompareSection
-          current={cenik.personRates}
-          next={cenik.web2027}
-          lift={webLift}
-          onChangeCurrent={setPersonRate}
-          onChangeNext={setWeb2027}
-          onResetCurrent={resetPersonRate}
-          onResetNext={resetWeb2027}
-          onLift={liftWeb2027}
-        />
+      <main className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col gap-12 px-4 py-8 md:px-6 md:py-10">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Trenutna cena in leto 2027 sta v isti vrstici. Pod ceno bungalova je preračun na osebo.
+            Pri 2027 vpišeš odstotek in dvigneš vse cene tega bungalova od trenutnega WEB. Beach Villa
+            je samo na spletni strani, v letu 2027 pa ima enake cene kot Bungalow I - Family. Prazniki
+            2027 trajajo do 10. 1. 2028. Zimski december 2026 pri variabilnih cenah traja do 18. 12.,
+            v predlogu 2027 do 27. 12.
+          </p>
+          <Button variant="outline" disabled={!dirty} onClick={() => commit({ ...cenik, prices: clonePrices() })}>
+            Ponastavi predlog 2027
+          </Button>
+        </div>
+
+        {PERSON_RATE_CARDS.map((card, index) => {
+          const variable = COMPARE_UNITS.find((unit) => unit.id === card.id);
+          return (
+            <section
+              key={card.id}
+              id={card.id === "ocean-1" ? "web-2027" : card.id}
+              className={cn(
+                "flex w-full min-w-0 scroll-mt-6 flex-col gap-4",
+                index > 0 && "border-t border-border/80 pt-10",
+              )}
+            >
+              <h2 className="font-heading text-3xl tracking-tight">{card.name}</h2>
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xs font-medium tracking-[0.16em] text-primary uppercase">Fiksne cene WEB</h3>
+                <WebCompareCard
+                  unitId={card.id}
+                  current={cenik.personRates[card.id]}
+                  next={cenik.web2027[card.id]}
+                  lift={webLift[card.id] ?? null}
+                  onChangeCurrent={(seasonId, guests, amount) => setPersonRate(card.id, seasonId, guests, amount)}
+                  onChangeNext={(seasonId, guests, amount) => setWeb2027(card.id, seasonId, guests, amount)}
+                  onResetCurrent={() => resetPersonRate(card.id)}
+                  onResetNext={() => resetWeb2027(card.id)}
+                  onLift={(percent) => liftWeb2027(card.id, percent)}
+                />
+              </div>
+              <div id={card.id === "ocean-1" ? "primerjava" : undefined} className="flex flex-col gap-2">
+                <h3 className="text-xs font-medium tracking-[0.16em] text-primary uppercase">Variabilne cene</h3>
+                {card.id === "beach-4" ? (
+                  <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                    Razpon za Booking in Airbnb. V izhodišču 2026 je ni. Obdobja so enaka kot pri
+                    ostalih bungalovih v predlogu 2027.
+                  </p>
+                ) : null}
+                {variable?.has2026 ? (
+                  <CompareCard
+                    unitId={card.id}
+                    name={variable.name}
+                    detail={variable.detail}
+                    prices={prices[card.id]}
+                    summary={shiftSentence(card.id, prices)}
+                    onChange={(periodId, next) => setPrice(card.id, periodId, next)}
+                    onReset={() => resetUnit(card.id)}
+                  />
+                ) : (
+                  <BeachCard
+                    prices={prices["beach-4"]}
+                    onChange={(periodId, next) => setPrice("beach-4", periodId, next)}
+                    onReset={() => resetUnit("beach-4")}
+                  />
+                )}
+              </div>
+            </section>
+          );
+        })}
 
         <Rules />
-
-        <section id="primerjava" className="flex w-full min-w-0 scroll-mt-6 flex-col gap-5">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="font-heading text-2xl tracking-tight">Variabilne cene · Booking in Airbnb</h2>
-              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                Zimski december 2026 traja do 18. 12. V predlogu 2027 traja do 27. 12. in se od
-                19. 12. prekriva s prazniki.
-              </p>
-            </div>
-            <Button variant="outline" disabled={!dirty} onClick={() => commit({ ...cenik, prices: clonePrices() })}>
-              Ponastavi predlog 2027
-            </Button>
-          </div>
-
-          {COMPARE_UNITS.filter((unit) => unit.has2026).map((unit) => (
-            <CompareCard
-              key={unit.id}
-              unitId={unit.id}
-              name={unit.name}
-              detail={unit.detail}
-              prices={prices[unit.id]}
-              summary={shiftSentence(unit.id, prices)}
-              onChange={(periodId, next) => setPrice(unit.id, periodId, next)}
-              onReset={() => resetUnit(unit.id)}
-            />
-          ))}
-        </section>
-
-        <section className="flex w-full min-w-0 flex-col gap-4">
-          <div>
-            <h2 className="font-heading text-2xl tracking-tight">Beach Villa IV · variabilna cena</h2>
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Razpon za Booking in Airbnb. V izhodišču 2026 je ni. Obdobja so enaka kot pri ostalih
-              bungalovih v predlogu 2027.
-            </p>
-          </div>
-          <BeachCard
-            prices={prices["beach-4"]}
-            onChange={(periodId, next) => setPrice("beach-4", periodId, next)}
-            onReset={() => resetUnit("beach-4")}
-          />
-        </section>
       </main>
     </div>
-  );
-}
-
-function WebCompareSection({
-  current,
-  next,
-  lift,
-  onChangeCurrent,
-  onChangeNext,
-  onResetCurrent,
-  onResetNext,
-  onLift,
-}: {
-  current: PersonRates;
-  next: PersonRates;
-  lift: WebLift;
-  onChangeCurrent: (unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
-  onChangeNext: (unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
-  onResetCurrent: (unitId: string) => void;
-  onResetNext: (unitId: string) => void;
-  onLift: (unitId: string, percent: number) => void;
-}) {
-  return (
-    <section id="web-2027" className="flex w-full min-w-0 scroll-mt-6 flex-col gap-5">
-      <div>
-        <h2 className="font-heading text-2xl tracking-tight">Fiksne cene WEB</h2>
-        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Trenutna cena in leto 2027 sta v isti vrstici. Pri I, II in III je trenutna cena enaka na
-          spletni strani, Bookingu, Airbnbju in Agodi. Beach Villa je samo na spletni strani, v letu
-          2027 pa ima enake cene kot Bungalow I - Family. Pod ceno bungalova je preračun na osebo.
-          Pri 2027 vpišeš odstotek in dvigneš vse cene tega bungalova od trenutnega WEB. Prazniki
-          2027 trajajo do 10. 1. 2028.
-        </p>
-      </div>
-      {PERSON_RATE_CARDS.map((card) => (
-        <WebCompareCard
-          key={card.id}
-          unitId={card.id}
-          current={current[card.id]}
-          next={next[card.id]}
-          lift={lift[card.id] ?? null}
-          onChangeCurrent={(seasonId, guests, amount) => onChangeCurrent(card.id, seasonId, guests, amount)}
-          onChangeNext={(seasonId, guests, amount) => onChangeNext(card.id, seasonId, guests, amount)}
-          onResetCurrent={() => onResetCurrent(card.id)}
-          onResetNext={() => onResetNext(card.id)}
-          onLift={(percent) => onLift(card.id, percent)}
-        />
-      ))}
-    </section>
   );
 }
 
