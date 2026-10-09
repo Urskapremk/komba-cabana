@@ -86,8 +86,8 @@ function EuroInput({
           onChange(raw === "" ? null : Number(raw));
         }}
         className={cn(
-          "h-8 bg-white/90 pr-6 text-right text-sm tabular-nums",
-          pending && "border-dashed",
+          "h-8 rounded-md border-transparent bg-white pr-6 text-right text-sm tabular-nums shadow-none",
+          pending && "border-dashed border-input",
         )}
       />
       <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[11px] text-muted-foreground">
@@ -103,10 +103,10 @@ function Delta({ base, next }: { base: number | null; next: number | null }) {
   const tone = delta.euros > 0 ? "text-[#1d6b45]" : delta.euros < 0 ? "text-[#8a3b28]" : "text-muted-foreground";
   const sign = delta.euros > 0 ? "+" : "";
   return (
-    <span className={cn("tabular-nums", tone)}>
+    <span className={cn("whitespace-nowrap tabular-nums", tone)}>
       {sign}
       {formatEuro(delta.euros)}
-      <span className="block text-xs">
+      <span className="ml-1 text-xs">
         {sign}
         {formatPercent(delta.percent)}
       </span>
@@ -177,7 +177,7 @@ export function PriceTables() {
   return (
     <div className="min-h-full bg-background text-foreground">
       <header className="border-b border-border/80">
-        <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-8 md:px-6 md:py-10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-8 md:px-6 md:py-10">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-xs font-medium tracking-[0.22em] text-primary uppercase">Komba Cabana</p>
@@ -197,7 +197,7 @@ export function PriceTables() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
+      <main className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
         <Rules />
 
         <section id="primerjava" className="flex w-full min-w-0 scroll-mt-6 flex-col gap-5">
@@ -339,7 +339,6 @@ function CompareCard({
   onReset: () => void;
 }) {
   const changed = PERIODS.some((period) => !sameMoney(prices[period.id], OPTIMA_PRICES[unitId][period.id]));
-  const bungalow = BUNGALOWS.find((item) => item.id === unitId)!;
 
   return (
     <article className="w-full min-w-0 overflow-hidden rounded-2xl ring-1 ring-foreground/10">
@@ -354,43 +353,51 @@ function CompareCard({
       </div>
       <p className="bg-[#f8f1e4] px-4 py-2.5 text-sm leading-relaxed text-[#3f3424]">{summary}</p>
 
-      <ul className="divide-y divide-border/70 bg-card md:hidden">
-        {COMPARE_PERIODS.map((period) => (
-          <CompareMobileRow
-            key={period.id}
-            unitId={unitId}
-            name={bungalow.short}
-            periodId={period.id}
-            price={prices[period.id]}
-            onChange={(next) => onChange(period.id, next)}
-          />
-        ))}
-      </ul>
-
-      <div className="hidden max-w-full overflow-x-auto bg-card md:block">
-        <table className="w-full min-w-[920px] text-sm">
+      <div className="max-w-full overflow-x-auto bg-card">
+        <table className="w-full min-w-[1040px] table-fixed border-collapse text-sm">
+          <colgroup>
+            <col className="w-[15%]" />
+            <col className="w-[7%]" />
+            <col className="w-[7%]" />
+            <col className="w-[7%]" />
+            <col className="w-[8.5%]" />
+            <col className="w-[8.5%]" />
+            <col className="w-[7%]" />
+            <col className="w-[13.333%]" />
+            <col className="w-[13.333%]" />
+            <col className="w-[13.334%]" />
+          </colgroup>
           <thead>
-            <tr className="text-left text-xs tracking-wide text-[#5c5142] uppercase">
-              <th rowSpan={2} className="bg-[#efe6d4] px-4 py-2 align-bottom font-medium">
+            <tr className="text-xs tracking-wide text-[#5c5142] uppercase">
+              <th rowSpan={2} className={cn(headCell, "bg-[#efe6d4] text-left")}>
                 Obdobje
               </th>
-              <th colSpan={2} className="bg-[#e4eef2] px-3 py-2 text-center font-medium">
+              <th colSpan={3} className={cn(headCell, "bg-[#e4eef2] text-center")}>
                 2026 izhodišče
               </th>
-              <th colSpan={2} className="bg-[#f3e6c8] px-3 py-2 text-center font-medium">
+              <th colSpan={3} className={cn(headCell, "bg-[#f3e6c8] text-center")}>
                 2027 predlog
               </th>
-              <th colSpan={2} className="bg-[#efe6d4] px-3 py-2 text-center font-medium">
+              <th colSpan={3} className={cn(headCell, "bg-[#efe6d4] text-center")}>
                 Sprememba
               </th>
             </tr>
-            <tr className="text-right text-xs tracking-wide text-[#5c5142] uppercase">
-              <th className="bg-[#e4eef2] px-3 py-1.5 font-medium">Min</th>
-              <th className="bg-[#e4eef2] px-3 py-1.5 font-medium">Max</th>
-              <th className="bg-[#f3e6c8] px-3 py-1.5 font-medium">Min</th>
-              <th className="bg-[#f3e6c8] px-3 py-1.5 font-medium">Max</th>
-              <th className="bg-[#efe6d4] px-3 py-1.5 font-medium">Δ min</th>
-              <th className="bg-[#efe6d4] px-4 py-1.5 font-medium">Δ max</th>
+            <tr className="text-xs tracking-wide text-[#5c5142] uppercase">
+              {["Min", "Max", "Razpon"].map((label) => (
+                <th key={`2026-${label}`} className={cn(headCell, "bg-[#e4eef2] text-right")}>
+                  {label}
+                </th>
+              ))}
+              {["Min", "Max", "Razpon"].map((label) => (
+                <th key={`2027-${label}`} className={cn(headCell, "bg-[#f3e6c8] text-right")}>
+                  {label}
+                </th>
+              ))}
+              {["Δ min", "Δ max", "Δ razpon"].map((label) => (
+                <th key={label} className={cn(headCell, "bg-[#efe6d4] text-right")}>
+                  {label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -401,45 +408,46 @@ function CompareCard({
               const edited = !sameMoney(next, OPTIMA_PRICES[unitId][period.id]);
               const floor = floor2026(unitId, period.id);
               const underFloor = floor !== null && next.min !== null && next.min < floor.amount;
+              const baseBand = base.min !== null && base.max !== null ? base.max - base.min : null;
+              const nextBand = next.min !== null && next.max !== null ? next.max - next.min : null;
               return (
                 <tr key={period.id} className={SEASON_SOFT[tone]}>
-                  <td className="px-4 py-2.5">
+                  <td className={cn(bodyCell, "text-left")}>
                     <span className="font-medium">{SEASON_LABEL[period.season]}</span>
-                    <span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
-                      2026 {formatDate(period.from2026)} – {formatDate(period.to2026)}
-                    </span>
-                    <span className="block text-xs tabular-nums text-muted-foreground">
-                      2027 {formatDate(period.from2027)} – {formatDate(period.to2027)}
-                      {datesDiffer(period) ? " · drugačen konec" : ""}
-                    </span>
+                    <PeriodDates period={period} />
                     {edited ? <span className="mt-0.5 block text-xs text-primary">prilagojeno</span> : null}
                   </td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">{formatEuro(base.min)}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">{formatEuro(base.max)}</td>
-                  <td className="px-3 py-2.5">
+                  <td className={numCell}>{formatEuro(base.min)}</td>
+                  <td className={numCell}>{formatEuro(base.max)}</td>
+                  <td className={numCell}>{formatEuro(baseBand)}</td>
+                  <td className={cn(bodyCell, "text-right")}>
                     <EuroInput
                       label={`${name}, ${SEASON_LABEL[period.season]} od ${period.from2027}, min 2027`}
                       value={next.min}
                       onChange={(min) => onChange(period.id, { ...next, min })}
                     />
                     {underFloor ? (
-                      <span className="mt-1 block text-right text-xs text-[#8a3b28]">
+                      <span className="mt-1 block text-xs text-[#8a3b28]">
                         pod {floor.amount} €, {floor.label}
                       </span>
                     ) : null}
                   </td>
-                  <td className="px-3 py-2.5">
+                  <td className={cn(bodyCell, "text-right")}>
                     <EuroInput
                       label={`${name}, ${SEASON_LABEL[period.season]} od ${period.from2027}, max 2027`}
                       value={next.max}
                       onChange={(max) => onChange(period.id, { ...next, max })}
                     />
                   </td>
-                  <td className="px-3 py-2.5 text-right">
+                  <td className={numCell}>{formatEuro(nextBand)}</td>
+                  <td className={numCell}>
                     <Delta base={base.min} next={next.min} />
                   </td>
-                  <td className="px-4 py-2.5 text-right">
+                  <td className={numCell}>
                     <Delta base={base.max} next={next.max} />
+                  </td>
+                  <td className={numCell}>
+                    <Delta base={baseBand} next={nextBand} />
                   </td>
                 </tr>
               );
@@ -451,68 +459,29 @@ function CompareCard({
   );
 }
 
-function CompareMobileRow({
-  unitId,
-  name,
-  periodId,
-  price,
-  onChange,
-}: {
-  unitId: string;
-  name: string;
-  periodId: string;
-  price: Money;
-  onChange: (next: Money) => void;
-}) {
-  const period = COMPARE_PERIODS.find((item) => item.id === periodId)!;
-  const base = RATES_2026[unitId][period.id];
-  const tone = period.id === "prazniki" ? "poletje-december" : period.season;
-  const floor = floor2026(unitId, period.id);
-  const underFloor = floor !== null && price.min !== null && price.min < floor.amount;
+const headCell = "border border-[#e4d8c4] px-2 py-1.5 font-medium";
+const bodyCell = "border border-[#e4d8c4] px-2 py-1.5 align-middle";
+const numCell = "border border-[#e4d8c4] px-2 py-1.5 text-right align-middle tabular-nums whitespace-nowrap";
 
+function dayMonth(iso: string): string {
+  const [, month, day] = iso.split("-");
+  return `${Number(day)}. ${Number(month)}.`;
+}
+
+function PeriodDates({ period }: { period: (typeof COMPARE_PERIODS)[number] }) {
+  if (!datesDiffer(period)) {
+    return (
+      <span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
+        {dayMonth(period.from2026)} – {dayMonth(period.to2026)}
+      </span>
+    );
+  }
   return (
-    <li className={cn("px-4 py-3", SEASON_SOFT[tone])}>
-      <p className="font-medium">{SEASON_LABEL[period.season]}</p>
-      <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
-        2026 {formatDate(period.from2026)} – {formatDate(period.to2026)}
-      </p>
-      <p className="text-xs tabular-nums text-muted-foreground">
-        2027 {formatDate(period.from2027)} – {formatDate(period.to2027)}
-        {datesDiffer(period) ? " · drugačen konec" : ""}
-      </p>
-      <dl className="mt-2 grid grid-cols-2 gap-2 text-sm tabular-nums">
-        <div>
-          <dt className="text-xs text-muted-foreground">2026 min–max</dt>
-          <dd>
-            {formatEuro(base.min)} – {formatEuro(base.max)}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-muted-foreground">Sprememba</dt>
-          <dd className="flex justify-between gap-2">
-            <Delta base={base.min} next={price.min} />
-            <Delta base={base.max} next={price.max} />
-          </dd>
-        </div>
-      </dl>
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <EuroInput
-          label={`${name}, ${SEASON_LABEL[period.season]} od ${period.from2027}, min 2027`}
-          value={price.min}
-          onChange={(min) => onChange({ ...price, min })}
-        />
-        <EuroInput
-          label={`${name}, ${SEASON_LABEL[period.season]} od ${period.from2027}, max 2027`}
-          value={price.max}
-          onChange={(max) => onChange({ ...price, max })}
-        />
-      </div>
-      {underFloor ? (
-        <p className="mt-1 text-xs text-[#8a3b28]">
-          Min je pod {floor.amount} € ({floor.label}, 2026).
-        </p>
-      ) : null}
-    </li>
+    <span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
+      2026 {dayMonth(period.from2026)} – {dayMonth(period.to2026)}
+      <br />
+      2027 {dayMonth(period.from2027)} – {dayMonth(period.to2027)}
+    </span>
   );
 }
 
@@ -535,50 +504,24 @@ function BeachCard({
           Počisti
         </Button>
       </div>
-      <ul className="divide-y divide-border/70 bg-card md:hidden">
-        {COMPARE_PERIODS.map((period) => {
-          const price = prices[period.id];
-          const gap = spread(price);
-          const tone = period.id === "prazniki" ? "poletje-december" : period.season;
-          return (
-            <li key={period.id} className={cn("px-4 py-3", SEASON_SOFT[tone])}>
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="font-medium">{SEASON_LABEL[period.season]}</span>
-                <span className="text-xs tabular-nums text-muted-foreground">
-                  {gap ? `${formatEuro(gap.euros)} · ${formatPercent(gap.percent)}` : "—"}
-                </span>
-              </div>
-              <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
-                {formatDate(period.from2027)} – {formatDate(period.to2027)}
-              </p>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <EuroInput
-                  label={`Beach Villa, ${SEASON_LABEL[period.season]}, min`}
-                  value={price.min}
-                  pending={price.min === null && price.max === null}
-                  onChange={(min) => onChange(period.id, { ...price, min })}
-                />
-                <EuroInput
-                  label={`Beach Villa, ${SEASON_LABEL[period.season]}, max`}
-                  value={price.max}
-                  pending={price.min === null && price.max === null}
-                  onChange={(max) => onChange(period.id, { ...price, max })}
-                />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      <div className="hidden overflow-x-auto bg-card md:block">
-        <table className="w-full min-w-[720px] text-sm">
+      <div className="max-w-full overflow-x-auto bg-card">
+        <table className="w-full min-w-[720px] table-fixed border-collapse text-sm">
+          <colgroup>
+            <col className="w-[16%]" />
+            <col className="w-[16%]" />
+            <col className="w-[20%]" />
+            <col className="w-[16%]" />
+            <col className="w-[16%]" />
+            <col className="w-[16%]" />
+          </colgroup>
           <thead>
-            <tr className="bg-[#efe6d4] text-left text-xs tracking-wide text-[#5c5142] uppercase">
-              <th className="px-4 py-2 font-medium">Od</th>
-              <th className="px-3 py-2 font-medium">Do</th>
-              <th className="px-3 py-2 font-medium">Sezona</th>
-              <th className="px-3 py-2 font-medium">Min 2027</th>
-              <th className="px-3 py-2 font-medium">Max 2027</th>
-              <th className="px-4 py-2 text-right font-medium">Razpon</th>
+            <tr className="text-xs tracking-wide text-[#5c5142] uppercase">
+              <th className={cn(headCell, "bg-[#efe6d4] text-left")}>Od</th>
+              <th className={cn(headCell, "bg-[#efe6d4] text-left")}>Do</th>
+              <th className={cn(headCell, "bg-[#efe6d4] text-left")}>Sezona</th>
+              <th className={cn(headCell, "bg-[#f3e6c8] text-right")}>Min</th>
+              <th className={cn(headCell, "bg-[#f3e6c8] text-right")}>Max</th>
+              <th className={cn(headCell, "bg-[#f3e6c8] text-right")}>Razpon</th>
             </tr>
           </thead>
           <tbody>
@@ -586,32 +529,33 @@ function BeachCard({
               const price = prices[period.id];
               const gap = spread(price);
               const tone = period.id === "prazniki" ? "poletje-december" : period.season;
+              const pending = price.min === null && price.max === null;
               return (
                 <tr key={period.id} className={SEASON_SOFT[tone]}>
-                  <td className="px-4 py-2.5 tabular-nums whitespace-nowrap">{formatDate(period.from2027)}</td>
-                  <td className="px-3 py-2.5 tabular-nums whitespace-nowrap">{formatDate(period.to2027)}</td>
-                  <td className="px-3 py-2.5 font-medium">{SEASON_LABEL[period.season]}</td>
-                  <td className="px-3 py-2.5">
+                  <td className={cn(bodyCell, "tabular-nums whitespace-nowrap")}>{formatDate(period.from2027)}</td>
+                  <td className={cn(bodyCell, "tabular-nums whitespace-nowrap")}>{formatDate(period.to2027)}</td>
+                  <td className={cn(bodyCell, "font-medium")}>{SEASON_LABEL[period.season]}</td>
+                  <td className={cn(bodyCell, "text-right")}>
                     <EuroInput
-                      label={`Beach Villa, ${SEASON_LABEL[period.season]}, min`}
+                      label={`Beach Villa, ${SEASON_LABEL[period.season]} od ${period.from2027}, min`}
                       value={price.min}
-                      pending={price.min === null && price.max === null}
+                      pending={pending}
                       onChange={(min) => onChange(period.id, { ...price, min })}
                     />
                   </td>
-                  <td className="px-3 py-2.5">
+                  <td className={cn(bodyCell, "text-right")}>
                     <EuroInput
-                      label={`Beach Villa, ${SEASON_LABEL[period.season]}, max`}
+                      label={`Beach Villa, ${SEASON_LABEL[period.season]} od ${period.from2027}, max`}
                       value={price.max}
-                      pending={price.min === null && price.max === null}
+                      pending={pending}
                       onChange={(max) => onChange(period.id, { ...price, max })}
                     />
                   </td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">
+                  <td className={numCell}>
                     {gap ? (
                       <>
                         {formatEuro(gap.euros)}
-                        <span className="block text-xs text-muted-foreground">{formatPercent(gap.percent)}</span>
+                        <span className="ml-1 text-xs text-muted-foreground">{formatPercent(gap.percent)}</span>
                       </>
                     ) : (
                       "—"
