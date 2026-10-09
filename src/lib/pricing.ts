@@ -589,6 +589,7 @@ export function readCenik(
   webLift: WebLift;
   commission: WebLift;
   earlyBooking: WebLift;
+  lodgeOccupancy: number;
 } | null {
   if (!input || typeof input !== "object") return null;
   const envelope = input as {
@@ -599,6 +600,7 @@ export function readCenik(
     webLift?: unknown;
     commission?: unknown;
     earlyBooking?: unknown;
+    lodgeOccupancy?: unknown;
   };
   const pricesSource = "prices" in envelope ? envelope.prices : envelope;
   const prices = sanitizePrices(pricesSource);
@@ -617,7 +619,16 @@ export function readCenik(
     webLift: webLift ?? emptyWebLift(),
     commission: commission ?? emptyWebLift(),
     earlyBooking: earlyBooking ?? emptyWebLift(),
+    lodgeOccupancy: sanitizeLodgeOccupancy(envelope.lodgeOccupancy),
   };
+}
+
+/** Zasedenost Lodge, od 0 do 100. Manjkajoča vrednost pomeni polno zasedenost. */
+export function sanitizeLodgeOccupancy(input: unknown): number {
+  if (typeof input !== "number" || !Number.isFinite(input)) return 100;
+  const rounded = Math.round(input * 10) / 10;
+  if (rounded < 0 || rounded > 100) return 100;
+  return rounded;
 }
 
 export function sanitizePrices(input: unknown): Prices | null {

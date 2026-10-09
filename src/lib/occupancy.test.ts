@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { OCCUPANCY_2026 } from "@/data/occupancy-2026";
 import { defaultPersonRates, emptyWebLift } from "@/lib/pricing";
-import { estimateAtLastYearOccupancy, occupiedNights, occupancyShare } from "@/lib/occupancy";
+import { applyLodgeOccupancy, estimateAtLastYearOccupancy, lodgeOccupancy2026, occupiedNights, occupancyShare } from "@/lib/occupancy";
 import { yearEarnings } from "@/lib/year-earnings";
 
 describe("zasedenost 2026", () => {
@@ -27,5 +27,18 @@ describe("zasedenost 2026", () => {
     assert.equal(estimate.months[1].left, 0);
     assert.ok(estimate.left < full.left);
     assert.equal(estimate.occupiedNights, 89 + 140 + 94 + 71);
+  });
+
+  it("zasedenost Lodge zniža zaslužek vseh bungalovov, januar ostane zaprt", () => {
+    assert.equal(lodgeOccupancy2026(), 27);
+    const full = yearEarnings(2027, defaultPersonRates(), emptyWebLift(), emptyWebLift());
+    const same = applyLodgeOccupancy(full, 100);
+    assert.equal(same.left, full.left);
+    const half = applyLodgeOccupancy(full, 50);
+    assert.equal(half.months[0].left, 0);
+    assert.equal(half.months[2].slices[0].units["ocean-1"].left, 5880);
+    assert.equal(half.left < full.left, true);
+    const empty = applyLodgeOccupancy(full, 0);
+    assert.equal(empty.left, 0);
   });
 });

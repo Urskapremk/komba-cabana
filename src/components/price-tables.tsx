@@ -64,6 +64,7 @@ type Cenik = {
   webLift: WebLift;
   commission: WebLift;
   earlyBooking: WebLift;
+  lodgeOccupancy: number;
 };
 
 const SEASON_SOFT: Record<string, string> = {
@@ -116,6 +117,7 @@ function blankCenik(): Cenik {
     webLift: emptyWebLift(),
     commission: emptyWebLift(),
     earlyBooking: emptyWebLift(),
+    lodgeOccupancy: 100,
   };
 }
 
@@ -244,6 +246,7 @@ export function PriceTables() {
         webLift: synced.webLift ?? emptyWebLift(),
         commission: synced.commission ?? emptyWebLift(),
         earlyBooking: synced.earlyBooking ?? emptyWebLift(),
+        lodgeOccupancy: synced.lodgeOccupancy,
       }),
     );
   }
@@ -427,6 +430,8 @@ export function PriceTables() {
             next={cenik.web2027}
             commission={commission}
             earlyBooking={earlyBooking}
+            lodgeOccupancy={cenik.lodgeOccupancy}
+            onLodgeOccupancy={(percent) => commit({ ...cenik, lodgeOccupancy: percent })}
           />
         ) : null}
         {tab === "zasedenost" ? (

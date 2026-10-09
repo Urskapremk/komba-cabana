@@ -2,14 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { cn } from "cn";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   PERSON_RATE_CARDS,
   SEASON_LABEL,
   formatEuro,
   formatPercent,
+  parseCommission,
   type PersonRates,
   type WebLift,
 } from "@/lib/pricing";
+import { applyLodgeOccupancy, lodgeOccupancy2026 } from "@/lib/occupancy";
 import { EARNINGS_YEAR, MONTH_LABELS, yearEarnings, type EarnLine, type YearEarnings } from "@/lib/year-earnings";
 
 const UNIT_SHORT: Record<string, string> = {
@@ -24,33 +28,51 @@ export function YearEarnings({
   next,
   commission,
   earlyBooking,
+  lodgeOccupancy,
+  onLodgeOccupancy,
 }: {
   web: PersonRates;
   next: PersonRates;
   commission: WebLift;
   earlyBooking: WebLift;
+  lodgeOccupancy: number;
+  onLodgeOccupancy: (percent: number) => void;
 }) {
   const [source, setSource] = useState<"web" | "2027">("web");
   const current = useMemo(
-    () => yearEarnings(EARNINGS_YEAR, web, commission, earlyBooking),
-    [web, commission, earlyBooking],
+    () => applyLodgeOccupancy(yearEarnings(EARNINGS_YEAR, web, commission, earlyBooking), lodgeOccupancy),
+    [web, commission, earlyBooking, lodgeOccupancy],
   );
   const planned = useMemo(
-    () => yearEarnings(EARNINGS_YEAR, next, commission, earlyBooking),
-    [next, commission, earlyBooking],
+    () => applyLodgeOccupancy(yearEarnings(EARNINGS_YEAR, next, commission, earlyBooking), lodgeOccupancy),
+    [next, commission, earlyBooking, lodgeOccupancy],
   );
   const active = source === "web" ? current : planned;
+  const lastYear = lodgeOccupancy2026();
 
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-3">
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Januar in februar sta zaprta zaradi obnove. Odpremo marca: od takrat je vsak bungalov zaseden
-          vsako noč leta {EARNINGS_YEAR}. Pri vseh bungalovih velja web cena za 2 osebi. 4 osebe so izjema
-          in v zaslužek niso vštete. Ostane = polna cena − agencija − early booking. Oba odbitka sta
-          od polne cene, z odstotki iz cenika. 9.–13. 7. velja poletje. 19.–31. 12. je praznična cena,
-          1.–18. 12. je zima.
+          Januar in februar sta zaprta zaradi obnove. Od marca določiš, kako zaseden je Lodge. 100 % pomeni,
+          da je vsak bungalov zaseden vsako odprto noč leta {EARNINGS_YEAR}. Pri vseh bungalovih velja web
+          cena za 2 osebi. 4 osebe so izjema in v zaslužek niso vštete. Ostane = polna cena − agencija −
+          early booking. Oba odbitka sta od polne cene, z odstotki iz cenika.
         </p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-[#efe6d4] px-4 py-3 ring-1 ring-[#e4d8c4]">
+          <p className="text-sm text-[#3f3424]">
+            <span className="font-medium">Zasedenost Lodge</span>
+            <span className="ml-2">isti odstotek za vse bungalove</span>
+          </p>
+          <LodgePercent value={lodgeOccupancy} onApply={onLodgeOccupancy} />
+          <button
+            type="button"
+            className="text-sm text-[#1e3a46] underline-offset-2 hover:underline"
+            onClick={() => onLodgeOccupancy(lastYear)}
+          >
+            Lani {formatPercent(lastYear)}
+          </button>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <SourceCard
             title="Trenutni WEB"
@@ -68,7 +90,11 @@ export function YearEarnings({
       </div>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <TotalCard label="Polna cena" value={active.gross} hint={`${active.nights} noči × 4 bungalovi`} />
+        <TotalCard
+          label="Polna cena"
+          value={active.gross}
+          hint={`${active.nights} odprtih noči · Lodge ${formatPercent(lodgeOccupancy)}`}
+        />
         <TotalCard label="Agencija" value={active.agency} hint="od polne cene" tone="plum" />
         <TotalCard label="Early booking" value={active.early} hint="od polne cene" tone="sea" />
         <TotalCard
@@ -76,7 +102,7 @@ export function YearEarnings({
           value={active.left}
           hint={
             active.missingNights === 0
-              ? "to lahko zaslužiš"
+              ? `pri zasedenosti Lodge ${formatPercent(lodgeOccupancy)}`
               : `manjka cena za ${active.missingNights} noči bungalovov`
           }
           emphasis
@@ -113,7 +139,9 @@ export function YearEarnings({
       <section className="overflow-hidden rounded-2xl ring-1 ring-foreground/10">
         <div className="bg-[#1c1915] px-4 py-3 text-[#f6f1e7]">
           <h2 className="font-heading text-lg tracking-tight">Po mesecih · {source === "web" ? "trenutni WEB" : "WEB 2027"}</h2>
-          <p className="text-xs text-white/70">Znesek pri bungalovu je ostanek po obeh popustih.</p>
+          <p className="text-xs text-white/70">
+            Znesek pri bungalovu je ostanek po obeh popustih, pri zasedenosti Lodge {formatPercent(lodgeOccupancy)}.
+          </p>
         </div>
         <div className="max-w-full overflow-x-auto bg-card">
           <table className="w-full min-w-[880px] border-collapse text-sm">
@@ -228,10 +256,51 @@ function SourceCard({
       <span className="mt-2 block font-heading text-3xl tracking-tight tabular-nums">{formatEuro(year.left)}</span>
       <span className={cn("mt-1 block text-xs", selected ? "text-white/70" : "text-muted-foreground")}>
         {year.missingNights === 0
-          ? `ostane pri polni zasedenosti · polna cena ${formatEuro(year.gross)}`
+          ? `ostane pri tej zasedenosti · polna cena ${formatEuro(year.gross)}`
           : `samo vpisane noči · manjka cena za ${year.missingNights} noči bungalovov`}
       </span>
     </button>
+  );
+}
+
+function LodgePercent({ value, onApply }: { value: number; onApply: (percent: number) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft === null ? new Intl.NumberFormat("sl-SI", { maximumFractionDigits: 1 }).format(value) : draft;
+  const parsed = parseCommission(shown);
+
+  function apply() {
+    if (parsed === null) return;
+    onApply(parsed);
+    setDraft(null);
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="relative">
+        <Input
+          aria-label="Zasedenost Lodge"
+          size={3}
+          inputMode="decimal"
+          autoComplete="off"
+          value={shown}
+          onFocus={() => setDraft(new Intl.NumberFormat("sl-SI", { maximumFractionDigits: 1 }).format(value))}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              apply();
+            }
+          }}
+          onChange={(event) => setDraft(event.target.value.replace(/[^\d,.-]/g, "").slice(0, 5))}
+          className="h-8 w-14 rounded-md border-transparent bg-white px-1.5 pr-5 text-right text-sm tabular-nums shadow-none"
+        />
+        <span className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-[11px] text-muted-foreground">
+          %
+        </span>
+      </div>
+      <Button type="button" size="sm" disabled={parsed === null} onMouseDown={(event) => event.preventDefault()} onClick={apply}>
+        Uporabi
+      </Button>
+    </div>
   );
 }
 
