@@ -330,7 +330,7 @@ export function PriceTables() {
       <main className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col gap-12 px-4 py-8 md:px-6 md:py-10">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Trenutna cena in leto 2027 sta v isti vrstici. Pod ceno bungalova je preračun na osebo.
+            Trenutna cena in leto 2027 sta v isti vrstici. Pod ceno bungalova je preračun na osebo, cena za odraslo osebo.
             Pri 2027 vpišeš odstotek in dvigneš vse cene tega bungalova od trenutnega WEB. Beach Villa
             je samo na spletni strani, v letu 2027 pa ima enake cene kot Bungalow I - Family. Prazniki
             2027 trajajo do 10. 1. 2028. Zimski december 2026 pri variabilnih cenah traja do 18. 12.,
@@ -632,6 +632,7 @@ function PerPerson({ amount, guests }: { amount: number | null; guests: number }
     <span className="mt-0.5 block text-right text-[11px] leading-tight text-muted-foreground tabular-nums">
       {formatEuro(each)}
       <span className="block">na osebo</span>
+      <span className="block">cena za odraslo osebo</span>
     </span>
   );
 }
