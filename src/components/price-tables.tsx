@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { YearEarnings } from "@/components/year-earnings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "cn";
@@ -336,6 +337,18 @@ export function PriceTables() {
   const dirty = BUNGALOWS.some((bungalow) =>
     PERIODS.some((period) => !sameMoney(prices[bungalow.id][period.id], OPTIMA_PRICES[bungalow.id][period.id])),
   );
+  const [tab, setTab] = useState<"cenik" | "zasluzek">("cenik");
+  useEffect(() => {
+    const read = () => setTab(window.location.hash === "#zasluzek" ? "zasluzek" : "cenik");
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, []);
+  function selectTab(next: "cenik" | "zasluzek") {
+    const hash = next === "zasluzek" ? "#zasluzek" : "#cenik";
+    if (window.location.hash !== hash) window.location.hash = hash;
+    setTab(next);
+  }
 
   return (
     <div className="min-h-full bg-background text-foreground">
@@ -347,21 +360,59 @@ export function PriceTables() {
               <h1 className="font-heading mt-2 text-4xl tracking-tight md:text-5xl">Kalkulacije cen</h1>
             </div>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Fiksne cene WEB
-              <br />
-              2027 za vpis
+              {tab === "zasluzek" ? (
+                <>
+                  Polna zasedenost
+                  <br />
+                  leto 2027
+                </>
+              ) : (
+                <>
+                  Fiksne cene WEB
+                  <br />
+                  2027 za vpis
+                </>
+              )}
             </p>
           </div>
-          <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
-            Pri vsakem bungalovu so najprej fiksne cene WEB, pod njimi variabilne. Fiksne cene so na
-            noč za spletno stran. Pri I, II in III je ista cena tudi na Bookingu, Airbnbju in Agodi.
-            Polni penzion ni vključen. Leto 2027 je v isti tabeli, desno od trenutnih cen. Vpis ostane
-            v brskalniku.
-          </p>
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Pogled">
+            <Button
+              variant={tab === "cenik" ? "default" : "outline"}
+              aria-selected={tab === "cenik"}
+              onClick={() => selectTab("cenik")}
+            >
+              Cenik
+            </Button>
+            <Button
+              variant={tab === "zasluzek" ? "default" : "outline"}
+              aria-selected={tab === "zasluzek"}
+              onClick={() => selectTab("zasluzek")}
+            >
+              Zaslužek
+            </Button>
+          </div>
+          {tab === "cenik" ? (
+            <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
+              Pri vsakem bungalovu so najprej fiksne cene WEB, pod njimi variabilne. Fiksne cene so na
+              noč za spletno stran. Pri I, II in III je ista cena tudi na Bookingu, Airbnbju in Agodi.
+              Polni penzion ni vključen. Leto 2027 je v isti tabeli, desno od trenutnih cen. Vpis ostane
+              v brskalniku.
+            </p>
+          ) : null}
         </div>
       </header>
 
       <main className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col gap-12 px-4 py-8 md:px-6 md:py-10">
+        {tab === "zasluzek" ? (
+          <YearEarnings
+            web={cenik.personRates}
+            next={cenik.web2027}
+            commission={commission}
+            earlyBooking={earlyBooking}
+          />
+        ) : null}
+        {tab === "cenik" ? (
+        <>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Trenutna cena in leto 2027 sta v isti vrstici. Pod ceno bungalova je preračun na osebo, cena za odraslo osebo.
@@ -443,6 +494,8 @@ export function PriceTables() {
         })}
 
         <Rules />
+        </>
+        ) : null}
       </main>
     </div>
   );
