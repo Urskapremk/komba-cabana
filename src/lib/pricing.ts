@@ -42,8 +42,8 @@ export const PERIODS: Period[] = [
 export const BUNGALOWS: Bungalow[] = [
   {
     id: "ocean-1",
-    title: "Komba Cabana – Ocean Bungalov I – za 4",
-    short: "Ocean Bungalov I",
+    title: "Komba Cabana – Bungalow I - Family",
+    short: "Bungalow I - Family",
     meta: "za 4",
     source: "optima",
   },
@@ -351,7 +351,7 @@ export type PersonRateCard = {
 export const PERSON_RATE_CARDS: PersonRateCard[] = [
   {
     id: "ocean-1",
-    name: "Bungalov I",
+    name: "Bungalow I - Family",
     detail: "Ocean · spletna stran, Booking, Airbnb, Agoda-30 %",
     note: "",
     capacity: 4,
@@ -722,7 +722,7 @@ export const RATES_2026: Record<string, Record<string, Money>> = {
 };
 
 export const COMPARE_UNITS = [
-  { id: "ocean-1", name: "Bungalov I", detail: "Ocean · za 4 osebe · 4+0", has2026: true },
+  { id: "ocean-1", name: "Bungalow I - Family", detail: "Ocean · za 4 osebe · 4+0", has2026: true },
   { id: "ocean-2", name: "Bungalov II", detail: "Ocean · 2+0", has2026: true },
   { id: "garden-3", name: "Bungalov III", detail: "Garden · 2+0", has2026: true },
   { id: "beach-4", name: "Beach Villa IV", detail: "Bungalow IV · v letu 2026 ni bil v ceniku", has2026: false },

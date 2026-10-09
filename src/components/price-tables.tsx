@@ -546,7 +546,7 @@ function Rules() {
             </thead>
             <tbody>
               <tr className="border-t border-border/70">
-                <td className="px-4 py-3 font-medium">I · 4+0</td>
+                <td className="px-4 py-3 font-medium">Bungalow I - Family · 4+0</td>
                 <td className="px-3 py-3 tabular-nums">475 €</td>
                 <td className="px-3 py-3 tabular-nums">570 €</td>
                 <td className="px-4 py-3 text-muted-foreground">—</td>
