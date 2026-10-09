@@ -6,7 +6,7 @@ Fiksne cene WEB so iz spletne strani. Pri bungalovih I, II in III je ista cena t
 
 Variabilne cene so razpon min in max iz predloga Optima Plus, izhodišče 2026 ob letu 2027. Beach Villa IV v letu 2026 ni bila v ceniku. Vpis ostane v brskalniku.
 
-Zraven sta minimalne cene in pravila gap filla iz pisma za 2026. Minimalna cena 2027 je 120 € na osebo, pri vseh bungalovih.
+Zraven sta minimalne cene in pravila gap filla iz pisma za 2026. Minimalna cena 2027 je 120 € na osebo, pri vseh bungalovih. Provizijo agencije vpišeš v odstotkih pri vsakem bungalovu. Pod ceno na osebo piše, koliko ostane po proviziji.
 
 ## Zagon
 

@@ -30,6 +30,8 @@ import {
   emptyPersonRates,
   liftAmount,
   liftPersonUnit,
+  netAfterCommission,
+  parseCommission,
   parsePercent,
   readCenik,
   sanitizeOffers,
@@ -314,6 +316,24 @@ describe("cene po osebah", () => {
     assert.equal(pricePerPerson(420, 1), 420);
     assert.equal(pricePerPerson(670, 4), 168);
     assert.equal(pricePerPerson(null, 4), null);
+  });
+
+  it("provizija agencije pove, koliko ostane na osebo", () => {
+    assert.equal(parseCommission("15"), 15);
+    assert.equal(parseCommission("15,5"), 15.5);
+    assert.equal(parseCommission("0"), 0);
+    assert.equal(parseCommission("101"), null);
+    assert.equal(parseCommission("-5"), null);
+    assert.equal(netAfterCommission(140, 15), 119);
+    assert.equal(netAfterCommission(163, 20), 130);
+    assert.equal(netAfterCommission(70, 15), 60);
+    assert.equal(netAfterCommission(0, 15), 0);
+    assert.equal(netAfterCommission(null, 15), null);
+    assert.equal(netAfterCommission(140, null), null);
+    const cenik = readCenik({ commission: { "ocean-1": 15, "beach-4": 120 } });
+    assert.equal(cenik?.commission["ocean-1"], 15);
+    assert.equal(cenik?.commission["beach-4"], null);
+    assert.equal(cenik?.commission["ocean-2"], null);
   });
 
   it("minimalna cena 2027 je 120 € na osebo", () => {

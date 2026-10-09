@@ -554,7 +554,7 @@ export function sanitizeWeb2027(input: unknown): PersonRates | null {
   return readPersonGrid(input, emptyPersonRates());
 }
 
-export function sanitizeWebLift(input: unknown): WebLift | null {
+function readPercentMap(input: unknown, min: number, max: number): WebLift | null {
   if (!input || typeof input !== "object") return null;
   const source = input as Record<string, unknown>;
   const next = emptyWebLift();
@@ -565,15 +565,30 @@ export function sanitizeWebLift(input: unknown): WebLift | null {
     const value = source[card.id];
     if (value === null || typeof value !== "number" || !Number.isFinite(value)) continue;
     const rounded = Math.round(value * 10) / 10;
-    if (rounded < -90 || rounded > 300) continue;
+    if (rounded < min || rounded > max) continue;
     next[card.id] = rounded;
   }
   return recognized ? next : null;
 }
 
+export function sanitizeWebLift(input: unknown): WebLift | null {
+  return readPercentMap(input, -90, 300);
+}
+
+export function sanitizeCommission(input: unknown): WebLift | null {
+  return readPercentMap(input, 0, 100);
+}
+
 export function readCenik(
   input: unknown,
-): { prices: Prices; offers: Offers; personRates: PersonRates; web2027: PersonRates; webLift: WebLift } | null {
+): {
+  prices: Prices;
+  offers: Offers;
+  personRates: PersonRates;
+  web2027: PersonRates;
+  webLift: WebLift;
+  commission: WebLift;
+} | null {
   if (!input || typeof input !== "object") return null;
   const envelope = input as {
     prices?: unknown;
@@ -581,6 +596,7 @@ export function readCenik(
     personRates?: unknown;
     web2027?: unknown;
     webLift?: unknown;
+    commission?: unknown;
   };
   const pricesSource = "prices" in envelope ? envelope.prices : envelope;
   const prices = sanitizePrices(pricesSource);
@@ -588,13 +604,15 @@ export function readCenik(
   const personRates = sanitizePersonRates(envelope.personRates);
   const web2027 = sanitizeWeb2027(envelope.web2027);
   const webLift = sanitizeWebLift(envelope.webLift);
-  if (!prices && !offers && !personRates && !web2027 && !webLift) return null;
+  const commission = sanitizeCommission(envelope.commission);
+  if (!prices && !offers && !personRates && !web2027 && !webLift && !commission) return null;
   return {
     prices: prices ?? clonePrices(),
     offers: offers ?? emptyOffers(),
     personRates: personRates ?? defaultPersonRates(),
     web2027: web2027 ?? emptyPersonRates(),
     webLift: webLift ?? emptyWebLift(),
+    commission: commission ?? emptyWebLift(),
   };
 }
 
@@ -676,6 +694,23 @@ export function parsePercent(raw: string): number | null {
   const value = Math.round(Number(text) * 10) / 10;
   if (value < -90 || value > 300) return null;
   return value;
+}
+
+/** Provizija agencije, od 0 do 100. Vejica in pika sta enaki. */
+export function parseCommission(raw: string): number | null {
+  const text = raw.trim().replace(/\s/g, "").replace(",", ".");
+  if (!/^\d{1,3}(\.\d{1,2})?$/.test(text)) return null;
+  const value = Math.round(Number(text) * 10) / 10;
+  if (value < 0 || value > 100) return null;
+  return value;
+}
+
+/** Koliko ostane od zneska na osebo po proviziji agencije. */
+export function netAfterCommission(amount: number | null, percent: number | null): number | null {
+  if (amount == null || percent == null || !Number.isFinite(percent)) return null;
+  const next = Math.round(amount * (1 - percent / 100));
+  if (next < 0 || next >= 1_000_000) return null;
+  return next;
 }
 
 export function liftAmount(amount: number | null, percent: number): number | null {
