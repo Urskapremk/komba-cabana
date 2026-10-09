@@ -89,14 +89,18 @@ function parseCenik(raw: string | null): Cenik | null {
 }
 
 function mirrorBeach(cenik: Cenik): Cenik {
+  const webLift = cenik.webLift ?? emptyWebLift();
+  const beachLifted = webLift["beach-4"] != null;
   return {
     ...cenik,
-    webLift: cenik.webLift ?? emptyWebLift(),
+    webLift,
     commission: cenik.commission ?? emptyWebLift(),
     earlyBooking: cenik.earlyBooking ?? emptyWebLift(),
     web2027: {
       ...cenik.web2027,
-      "beach-4": beachWeb2027FromFamily(cenik.web2027, cenik.personRates),
+      "beach-4": beachLifted
+        ? cenik.web2027["beach-4"]
+        : beachWeb2027FromFamily(cenik.web2027, cenik.personRates),
     },
   };
 }
@@ -362,8 +366,8 @@ export function PriceTables() {
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Trenutna cena in leto 2027 sta v isti vrstici. Pod ceno bungalova je preračun na osebo, cena za odraslo osebo.
             Minimalna cena 2027 je {PERSON_FLOOR_2027} € na osebo.             Provizijo agencije in Early booking vpišeš v odstotkih. Pod ceno na osebo piše, koliko ostane.
-            Pri 2027 vpišeš odstotek in dvigneš vse cene tega bungalova od trenutnega WEB. Beach Villa
-            je samo na spletni strani, v letu 2027 pa ima enake cene kot Bungalow I - Family. Prazniki
+            Pri 2027 vpišeš odstotek in dvigneš vse cene tega bungalova od trenutnega WEB, tudi pri
+            Beach Villi. Dokler dviga ni, ima Beach Villa enake cene 2027 kot Bungalow I - Family. Prazniki
             2027 trajajo do 10. 1. 2028. Zimski december 2026 pri variabilnih cenah traja do 18. 12.,
             v predlogu 2027 do 27. 12.
           </p>
@@ -494,7 +498,7 @@ function WebCompareCard({
           <Button size="sm" variant="secondary" disabled={!currentChanged} onClick={onResetCurrent}>
             Ponastavi WEB
           </Button>
-          {linkedToFamily ? null : (
+          {linkedToFamily && lift == null ? null : (
             <Button size="sm" variant="secondary" disabled={!nextChanged} onClick={onResetNext}>
               Počisti 2027
             </Button>
@@ -537,20 +541,15 @@ function WebCompareCard({
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#e4d8c4] bg-[#f3e6c8] px-4 py-2">
-        {linkedToFamily ? (
-          <p className="text-sm text-[#3f3424]">
-            <span className="font-medium">2027</span>
-            <span className="ml-2">enako kot Bungalow I - Family</span>
-          </p>
-        ) : (
-          <>
-            <p className="text-sm text-[#3f3424]">
-              <span className="font-medium">2027</span>
-              <span className="ml-2">vse cene od WEB</span>
-            </p>
-            <PercentLift label={`${card.name}, odstotek dviga 2027`} value={lift} onApply={onLift} />
-          </>
-        )}
+        <p className="text-sm text-[#3f3424]">
+          <span className="font-medium">2027</span>
+          <span className="ml-2">
+            {linkedToFamily && lift == null
+              ? "enako kot Bungalow I - Family, ali dvigni od WEB"
+              : "vse cene od WEB"}
+          </span>
+        </p>
+        <PercentLift label={`${card.name}, odstotek dviga 2027`} value={lift} onApply={onLift} />
       </div>
       <div className="max-w-full overflow-hidden bg-card">
         <table className="w-full table-fixed border-collapse text-sm">
@@ -630,8 +629,8 @@ function WebCompareCard({
                       <EuroInput
                         label={`${card.name}, 2027, ${season.label}, ${guestLabel(count)}`}
                         value={amount}
-                        pending={amount == null && !linkedToFamily}
-                        readOnly={linkedToFamily}
+                        pending={amount == null && !(linkedToFamily && lift == null)}
+                        readOnly={linkedToFamily && lift == null}
                         onChange={(value) => onChangeNext(season.id, count, value)}
                       />
                       {amount != null ? (

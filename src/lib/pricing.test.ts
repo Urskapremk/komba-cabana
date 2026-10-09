@@ -284,6 +284,15 @@ describe("cene po osebah", () => {
     assert.equal(lifted["pomlad-jesen"][4], 704);
     assert.equal(lifted["poletje-december"][4], 735);
     assert.equal(liftAmount(null, 5), null);
+    const beach = liftPersonUnit("beach-4", defaultPersonRates()["beach-4"], 5);
+    assert.ok(beach);
+    assert.equal(beach.zima[4], 588);
+    assert.equal(beach.zima[3], 494);
+    assert.equal(beach.zima[2], 399);
+    assert.equal(beach.zima[1], 399);
+    assert.equal(beach["pomlad-jesen"][4], 704);
+    assert.equal(beach["poletje-december"][4], 735);
+    assert.equal(beach["poletje-december"][3], 641);
     const cenik = readCenik({ webLift: { "ocean-1": 7.5, "beach-4": 400, "ocean-2": null } });
     assert.equal(cenik?.webLift["ocean-1"], 7.5);
     assert.equal(cenik?.webLift["ocean-2"], null);
