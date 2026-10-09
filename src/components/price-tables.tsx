@@ -87,9 +87,10 @@ function EuroInput({
   const text = draft === null ? (value === null ? "" : String(value)) : draft;
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       <Input
         aria-label={label}
+        size={4}
         inputMode="numeric"
         autoComplete="off"
         value={text}
@@ -102,7 +103,7 @@ function EuroInput({
           onChange(raw === "" ? null : Number(raw));
         }}
         className={cn(
-          "h-8 rounded-md border-transparent bg-white pr-6 text-right text-sm tabular-nums shadow-none",
+          "h-8 w-full min-w-0 rounded-md border-transparent bg-white px-1 pr-5 text-right text-sm tabular-nums shadow-none",
           pending && "border-dashed border-input",
         )}
       />
@@ -256,7 +257,7 @@ export function PriceTables() {
   return (
     <div className="min-h-full bg-background text-foreground">
       <header className="border-b border-border/80">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-8 md:px-6 md:py-10">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-4 py-8 md:px-6 md:py-10">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-xs font-medium tracking-[0.22em] text-primary uppercase">Komba Cabana</p>
@@ -276,7 +277,7 @@ export function PriceTables() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
+      <main className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
         <WebCompareSection
           current={cenik.personRates}
           next={cenik.web2027}
@@ -422,11 +423,8 @@ function WebCompareCard({
         {discountSentence(card)}
         {card.note ? ` ${card.note}` : ""}
       </p>
-      <div className="max-w-full overflow-x-auto bg-card">
-        <table
-          className="w-full table-fixed border-collapse text-sm"
-          style={{ minWidth: `${200 + guests.length * 168}px` }}
-        >
+      <div className="max-w-full overflow-hidden bg-card">
+        <table className="w-full table-fixed border-collapse text-sm">
           <colgroup>
             <col className="w-[18%]" />
             {guests.map((count) => (
@@ -620,7 +618,7 @@ function CompareCard({
       <p className="bg-[#f8f1e4] px-4 py-2.5 text-sm leading-relaxed text-[#3f3424]">{summary}</p>
 
       <div className="max-w-full overflow-x-auto bg-card">
-        <table className="w-full min-w-[1040px] table-fixed border-collapse text-sm">
+        <table className="w-full table-fixed border-collapse text-sm">
           <colgroup>
             <col className="w-[15%]" />
             <col className="w-[7%]" />
@@ -771,7 +769,7 @@ function BeachCard({
         </Button>
       </div>
       <div className="max-w-full overflow-x-auto bg-card">
-        <table className="w-full min-w-[720px] table-fixed border-collapse text-sm">
+        <table className="w-full table-fixed border-collapse text-sm">
           <colgroup>
             <col className="w-[16%]" />
             <col className="w-[16%]" />
