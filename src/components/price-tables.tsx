@@ -14,27 +14,34 @@ import {
   RATES_2026,
   SEASON_LABEL,
   type Money,
+  PERSON_RATE_CARDS,
+  PERSON_SEASONS,
   type Offers,
+  type PersonRates,
+  type PersonSeasonId,
   type Prices,
   clonePrices,
   datesDiffer,
+  defaultPersonRates,
+  discountSentence,
   emptyOffers,
   floor2026,
   formatDate,
   formatEuro,
+  formatMonthDay,
   formatPercent,
-  guestCounts,
   guestLabel,
+  personColumns,
+  personRateCard,
   priceDelta,
   readCenik,
   sameMoney,
-  segmentLabel,
   spread,
 } from "@/lib/pricing";
 
 const STORAGE_KEY = "komba-cabana-cenik-v1";
 
-type Cenik = { prices: Prices; offers: Offers };
+type Cenik = { prices: Prices; offers: Offers; personRates: PersonRates };
 
 const SEASON_SOFT: Record<string, string> = {
   zima: "bg-[#f3f7f9]",
@@ -61,7 +68,7 @@ function parseCenik(raw: string | null): Cenik | null {
 }
 
 function blankCenik(): Cenik {
-  return { prices: clonePrices(), offers: emptyOffers() };
+  return { prices: clonePrices(), offers: emptyOffers(), personRates: defaultPersonRates() };
 }
 
 function EuroInput({
@@ -190,24 +197,24 @@ export function PriceTables() {
     });
   }
 
-  function setOffer(unitId: string, periodId: string, guests: number, amount: number | null) {
-    const row = cenik.offers[unitId][periodId];
+  function setPersonRate(unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) {
+    const row = cenik.personRates[unitId][seasonId];
     commit({
       ...cenik,
-      offers: {
-        ...cenik.offers,
+      personRates: {
+        ...cenik.personRates,
         [unitId]: {
-          ...cenik.offers[unitId],
-          [periodId]: { ...row, [guests]: amount },
+          ...cenik.personRates[unitId],
+          [seasonId]: { ...row, [guests]: amount },
         },
       },
     });
   }
 
-  function resetOffers(unitId: string) {
+  function resetPersonRate(unitId: string) {
     commit({
       ...cenik,
-      offers: { ...cenik.offers, [unitId]: emptyOffers()[unitId] },
+      personRates: { ...cenik.personRates, [unitId]: defaultPersonRates()[unitId] },
     });
   }
 
@@ -225,24 +232,24 @@ export function PriceTables() {
               <h1 className="font-heading mt-2 text-4xl tracking-tight md:text-5xl">Kalkulacije cen</h1>
             </div>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Variabilne cene za Booking in Airbnb
+              Cene po osebah
               <br />
-              Ponudbe za 1, 2, 3 ali 4 osebe
+              Variabilni razpon za kanale
             </p>
           </div>
           <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
-            Variabilne cene so razpon na noč za Booking in Airbnb, bruto in pri polni kapaciteti.
-            Ponudba, ki jo pošlješ sama, ima eno ceno na noč za izbrano število oseb. Oboje vpišeš v
-            tabelo. Vpis ostane v brskalniku.
+            Cene po osebah so na noč za spletno stran, Booking, Airbnb in Agodo. Polni penzion ni
+            vključen. Variabilne cene spodaj so razpon min in max iz predloga Optima. Vpis ostane v
+            brskalniku.
           </p>
         </div>
       </header>
 
       <main className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
-        <OffersSection
-          offers={cenik.offers}
-          onChange={setOffer}
-          onReset={resetOffers}
+        <PersonRatesSection
+          rates={cenik.personRates}
+          onChange={setPersonRate}
+          onReset={resetPersonRate}
         />
 
         <Rules />
@@ -294,75 +301,74 @@ export function PriceTables() {
   );
 }
 
-function OffersSection({
-  offers,
+function PersonRatesSection({
+  rates,
   onChange,
   onReset,
 }: {
-  offers: Offers;
-  onChange: (unitId: string, periodId: string, guests: number, amount: number | null) => void;
+  rates: PersonRates;
+  onChange: (unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
   onReset: (unitId: string) => void;
 }) {
   return (
-    <section id="ponudbe" className="flex w-full min-w-0 scroll-mt-6 flex-col gap-5">
+    <section id="osebe" className="flex w-full min-w-0 scroll-mt-6 flex-col gap-5">
       <div>
-        <h2 className="font-heading text-2xl tracking-tight">Ponudbe</h2>
+        <h2 className="font-heading text-2xl tracking-tight">Cene po osebah</h2>
         <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Ena cena na noč za število oseb v ponudbi. Obdobja so enaka kot pri predlogu 2027.
-          Bungalov II in III sprejmeta do 2 osebi, Bungalov I in Beach Villa do 4.
+          Cena na noč. Pri I, II in III je enaka na spletni strani, Bookingu, Airbnbju in Agodi.
+          Beach Villa ima ceno samo na spletni strani. 9. 7.–13. 7. je v pomladi in v poletju.
         </p>
       </div>
-      {COMPARE_UNITS.map((unit) => (
-        <OfferCard
-          key={unit.id}
-          unitId={unit.id}
-          name={unit.name}
-          detail={offerDetail(unit.id)}
-          rows={offers[unit.id]}
-          onChange={(periodId, guests, amount) => onChange(unit.id, periodId, guests, amount)}
-          onReset={() => onReset(unit.id)}
+      {PERSON_RATE_CARDS.map((card) => (
+        <PersonRateCard
+          key={card.id}
+          unitId={card.id}
+          rows={rates[card.id]}
+          onChange={(seasonId, guests, amount) => onChange(card.id, seasonId, guests, amount)}
+          onReset={() => onReset(card.id)}
         />
       ))}
     </section>
   );
 }
 
-function OfferCard({
+function PersonRateCard({
   unitId,
-  name,
-  detail,
   rows,
   onChange,
   onReset,
 }: {
   unitId: string;
-  name: string;
-  detail: string;
-  rows: Offers[string];
-  onChange: (periodId: string, guests: number, amount: number | null) => void;
+  rows: PersonRates[string];
+  onChange: (seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
   onReset: () => void;
 }) {
-  const guests = guestCounts(unitId);
-  const filled = COMPARE_PERIODS.some((period) => guests.some((count) => rows[period.id]?.[count] != null));
-  const periodWidth = guests.length > 2 ? 28 : 36;
+  const card = personRateCard(unitId);
+  if (!card) return null;
+  const guests = personColumns(card.capacity);
+  const changed = PERSON_SEASONS.some((season) =>
+    guests.some((count) => rows[season.id]?.[count] !== card.seasons[season.id][count]),
+  );
+  const periodWidth = 34;
   const guestWidth = `${(100 - periodWidth) / guests.length}%`;
 
   return (
     <article className="w-fit max-w-full min-w-0 overflow-hidden rounded-2xl ring-1 ring-foreground/10">
       <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1c1915] px-4 py-3 text-[#f6f1e7]">
         <div>
-          <h3 className="font-heading text-lg tracking-tight">{name}</h3>
-          <p className="text-xs text-white/70">{detail}</p>
+          <h3 className="font-heading text-lg tracking-tight">{card.name}</h3>
+          <p className="text-xs text-white/70">{card.detail}</p>
         </div>
-        <Button size="sm" variant="secondary" disabled={!filled} onClick={onReset}>
-          Počisti
+        <Button size="sm" variant="secondary" disabled={!changed} onClick={onReset}>
+          Ponastavi
         </Button>
       </div>
+      <p className="bg-[#f8f1e4] px-4 py-2.5 text-sm leading-relaxed text-[#3f3424]">
+        {discountSentence(card)}
+        {card.note ? ` ${card.note}` : ""}
+      </p>
       <div className="max-w-full overflow-x-auto bg-card">
-        <table
-          className="table-fixed border-collapse text-sm"
-          style={{ width: `${210 + guests.length * 180}px` }}
-        >
+        <table className="table-fixed border-collapse text-sm" style={{ width: `${260 + guests.length * 150}px` }}>
           <colgroup>
             <col style={{ width: `${periodWidth}%` }} />
             {guests.map((count) => (
@@ -380,29 +386,27 @@ function OfferCard({
             </tr>
           </thead>
           <tbody>
-            {COMPARE_PERIODS.map((period) => {
-              const tone = period.id === "prazniki" ? "poletje-december" : period.season;
-              return (
-                <tr key={period.id} className={SEASON_SOFT[tone]}>
-                  <td className={cn(bodyCell, "text-left")}>
-                    <span className="font-medium">{periodTitle(period.id)}</span>
-                    <span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
-                      {dayMonth(period.from2027)} – {dayMonth(period.to2027)}
+            {PERSON_SEASONS.map((season) => (
+              <tr key={season.id} className={SEASON_SOFT[season.id]}>
+                <td className={cn(bodyCell, "text-left")}>
+                  <span className="font-medium">{season.label}</span>
+                  {season.ranges.map((range) => (
+                    <span key={`${range.from}-${range.to}`} className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
+                      {formatMonthDay(range.from)} – {formatMonthDay(range.to)}
                     </span>
-                  </td>
-                  {guests.map((count) => (
-                    <td key={count} className={cn(bodyCell, "text-right")}>
-                      <EuroInput
-                        label={`${name}, ${periodTitle(period.id)}, ${guestLabel(count)}`}
-                        value={rows[period.id]?.[count] ?? null}
-                        pending={rows[period.id]?.[count] == null}
-                        onChange={(amount) => onChange(period.id, count, amount)}
-                      />
-                    </td>
                   ))}
-                </tr>
-              );
-            })}
+                </td>
+                {guests.map((count) => (
+                  <td key={count} className={cn(bodyCell, "text-right")}>
+                    <EuroInput
+                      label={`${card.name}, ${season.label}, ${guestLabel(count)}`}
+                      value={rows[season.id]?.[count] ?? null}
+                      onChange={(amount) => onChange(season.id, count, amount)}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -626,18 +630,6 @@ function CompareCard({
 const headCell = "border border-[#e4d8c4] px-2 py-1.5 font-medium";
 const bodyCell = "border border-[#e4d8c4] px-2 py-1.5 align-middle";
 const numCell = "border border-[#e4d8c4] px-2 py-1.5 text-right align-middle tabular-nums whitespace-nowrap";
-
-function offerDetail(unitId: string): string {
-  const place = unitId === "garden-3" ? "Garden" : unitId === "beach-4" ? "Beach Villa" : "Ocean";
-  const capacity = guestCounts(unitId).at(-1) ?? 1;
-  const people = capacity === 2 ? "do 2 oseb" : `do ${capacity} oseb`;
-  return `${place} · ${people}`;
-}
-
-function periodTitle(periodId: string): string {
-  const period = PERIODS.find((item) => item.id === periodId);
-  return period ? segmentLabel(period) : periodId;
-}
 
 function dayMonth(iso: string): string {
   const [, month, day] = iso.split("-");

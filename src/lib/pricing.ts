@@ -301,6 +301,150 @@ export function guestLabel(count: number): string {
   return `${count} osebe`;
 }
 
+export type PersonSeasonId = "zima" | "pomlad-jesen" | "poletje-december";
+
+/** Obdobja iz kanalov, brez polnega penziona. 9. 7.–13. 7. je v pomladi in v poletju. */
+export const PERSON_SEASONS: {
+  id: PersonSeasonId;
+  label: string;
+  ranges: { from: string; to: string }[];
+}[] = [
+  {
+    id: "zima",
+    label: "Zima",
+    ranges: [
+      { from: "01-11", to: "03-28" },
+      { from: "12-01", to: "12-18" },
+    ],
+  },
+  {
+    id: "pomlad-jesen",
+    label: "Pomlad + jesen",
+    ranges: [
+      { from: "03-29", to: "07-13" },
+      { from: "10-01", to: "11-30" },
+    ],
+  },
+  {
+    id: "poletje-december",
+    label: "Poletje + december",
+    ranges: [
+      { from: "07-09", to: "09-30" },
+      { from: "12-19", to: "01-10" },
+    ],
+  },
+];
+
+export type PersonRateCard = {
+  id: string;
+  name: string;
+  detail: string;
+  note: string;
+  capacity: number;
+  discount: number;
+  minimumPersons: number;
+  minStay: number;
+  seasons: Record<PersonSeasonId, Record<number, number>>;
+};
+
+/** Cene na noč po osebah. Polni penzion ni vključen. */
+export const PERSON_RATE_CARDS: PersonRateCard[] = [
+  {
+    id: "ocean-1",
+    name: "Bungalov I",
+    detail: "Ocean · spletna stran, Booking, Airbnb, Agoda-30 %",
+    note: "",
+    capacity: 4,
+    discount: 70,
+    minimumPersons: 2,
+    minStay: 3,
+    seasons: {
+      zima: { 4: 560, 3: 490, 2: 420, 1: 420 },
+      "pomlad-jesen": { 4: 670, 3: 600, 2: 530, 1: 530 },
+      "poletje-december": { 4: 700, 3: 630, 2: 560, 1: 560 },
+    },
+  },
+  {
+    id: "ocean-2",
+    name: "Bungalov II",
+    detail: "Ocean · spletna stran, Booking, Airbnb, Agoda",
+    note: "",
+    capacity: 2,
+    discount: 70,
+    minimumPersons: 1,
+    minStay: 3,
+    seasons: {
+      zima: { 2: 350, 1: 280 },
+      "pomlad-jesen": { 2: 420, 1: 350 },
+      "poletje-december": { 2: 450, 1: 380 },
+    },
+  },
+  {
+    id: "garden-3",
+    name: "Bungalov III",
+    detail: "Garden · spletna stran, Booking, Airbnb, Agoda",
+    note: "",
+    capacity: 2,
+    discount: 70,
+    minimumPersons: 1,
+    minStay: 3,
+    seasons: {
+      zima: { 2: 330, 1: 260 },
+      "pomlad-jesen": { 2: 390, 1: 320 },
+      "poletje-december": { 2: 400, 1: 330 },
+    },
+  },
+  {
+    id: "beach-4",
+    name: "Beach Villa IV",
+    detail: "Samo lastna spletna stran",
+    note: "Booking, Airbnb in Agoda nimajo vpisane cene.",
+    capacity: 4,
+    discount: 90,
+    minimumPersons: 2,
+    minStay: 3,
+    seasons: {
+      zima: { 4: 560, 3: 470, 2: 380, 1: 380 },
+      "pomlad-jesen": { 4: 670, 3: 580, 2: 490, 1: 490 },
+      "poletje-december": { 4: 700, 3: 610, 2: 520, 1: 520 },
+    },
+  },
+];
+
+export type PersonRates = Record<string, Record<PersonSeasonId, Record<number, number | null>>>;
+
+export function personColumns(capacity: number): number[] {
+  return Array.from({ length: capacity }, (_, index) => capacity - index);
+}
+
+export function formatMonthDay(monthDay: string): string {
+  const [month, day] = monthDay.split("-");
+  return `${Number(day)}. ${Number(month)}.`;
+}
+
+export function discountSentence(card: PersonRateCard): string {
+  if (card.minimumPersons <= 1) {
+    return `Popust ${card.discount} € na osebo pod ${card.capacity}. Najmanj ${card.minStay} noči.`;
+  }
+  return `Popust ${card.discount} € na osebo pod ${card.capacity}. Od ${card.minimumPersons} oseb navzdol je cena enaka. Najmanj ${card.minStay} noči.`;
+}
+
+export function defaultPersonRates(): PersonRates {
+  const rates: PersonRates = {};
+  for (const card of PERSON_RATE_CARDS) {
+    rates[card.id] = {
+      zima: { ...card.seasons.zima },
+      "pomlad-jesen": { ...card.seasons["pomlad-jesen"] },
+      "poletje-december": { ...card.seasons["poletje-december"] },
+    };
+  }
+  return rates;
+}
+
+export function personRateCard(unitId: string): PersonRateCard | undefined {
+  return PERSON_RATE_CARDS.find((card) => card.id === unitId);
+}
+
 export function emptyOffers(): Offers {
   return Object.fromEntries(
     BUNGALOWS.map((bungalow) => [
@@ -360,14 +504,41 @@ export function sanitizeOffers(input: unknown): Offers | null {
   return recognized ? next : null;
 }
 
-export function readCenik(input: unknown): { prices: Prices; offers: Offers } | null {
+export function sanitizePersonRates(input: unknown): PersonRates | null {
   if (!input || typeof input !== "object") return null;
-  const envelope = input as { prices?: unknown; offers?: unknown };
+  const source = input as Record<string, unknown>;
+  const next = defaultPersonRates();
+  let recognized = false;
+  for (const card of PERSON_RATE_CARDS) {
+    const row = source[card.id];
+    if (!row || typeof row !== "object") continue;
+    recognized = true;
+    for (const season of PERSON_SEASONS) {
+      const cell = (row as Record<string, unknown>)[season.id];
+      if (!cell || typeof cell !== "object") continue;
+      for (const count of personColumns(card.capacity)) {
+        const amount = sanitizeAmount((cell as Record<string, unknown>)[String(count)]);
+        if (amount === undefined) continue;
+        next[card.id][season.id][count] = amount;
+      }
+    }
+  }
+  return recognized ? next : null;
+}
+
+export function readCenik(input: unknown): { prices: Prices; offers: Offers; personRates: PersonRates } | null {
+  if (!input || typeof input !== "object") return null;
+  const envelope = input as { prices?: unknown; offers?: unknown; personRates?: unknown };
   const pricesSource = "prices" in envelope ? envelope.prices : envelope;
   const prices = sanitizePrices(pricesSource);
   const offers = sanitizeOffers(envelope.offers);
-  if (!prices && !offers) return null;
-  return { prices: prices ?? clonePrices(), offers: offers ?? emptyOffers() };
+  const personRates = sanitizePersonRates(envelope.personRates);
+  if (!prices && !offers && !personRates) return null;
+  return {
+    prices: prices ?? clonePrices(),
+    offers: offers ?? emptyOffers(),
+    personRates: personRates ?? defaultPersonRates(),
+  };
 }
 
 export function sanitizePrices(input: unknown): Prices | null {

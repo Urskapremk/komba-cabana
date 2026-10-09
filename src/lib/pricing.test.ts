@@ -15,8 +15,11 @@ import {
   quoteStay,
   resolvePeriod,
   resolvedSegments,
+  PERSON_RATE_CARDS,
+  PERSON_SEASONS,
   emptyOffers,
   guestCounts,
+  personRateCard,
   readCenik,
   sanitizeOffers,
   sanitizePrices,
@@ -196,5 +199,51 @@ describe("shranjene cene", () => {
     assert.deepEqual(cenik.prices["ocean-1"]["zima-1"], { min: 560, max: 675 });
     assert.equal(cenik.offers["beach-4"]["zima-1"][3], 360);
     assert.equal(cenik.offers["ocean-1"]["poletje-1"][4], null);
+    assert.equal(cenik.personRates["ocean-1"].zima[4], 560);
+  });
+});
+
+describe("cene po osebah", () => {
+  it("bungalov I vzame kanale in izpusti polni penzion", () => {
+    const card = personRateCard("ocean-1");
+    assert.ok(card);
+    assert.equal(card.seasons.zima[4], 560);
+    assert.equal(card.seasons.zima[3], 490);
+    assert.equal(card.seasons.zima[2], 420);
+    assert.equal(card.seasons.zima[1], 420);
+    assert.equal(card.seasons["pomlad-jesen"][4], 670);
+    assert.equal(card.seasons["poletje-december"][2], 560);
+    assert.equal(card.discount, 70);
+    assert.equal(card.minimumPersons, 2);
+    assert.equal(JSON.stringify(card).includes("920"), false);
+    assert.equal(JSON.stringify(card).includes("1080"), false);
+    assert.equal(JSON.stringify(card).includes("1100"), false);
+  });
+
+  it("II in III imata popust do 1 osebe, Beach Villa samo spletno stran", () => {
+    assert.equal(personRateCard("ocean-2")?.seasons.zima[2], 350);
+    assert.equal(personRateCard("ocean-2")?.seasons.zima[1], 280);
+    assert.equal(personRateCard("ocean-2")?.seasons["pomlad-jesen"][2], 420);
+    assert.equal(personRateCard("ocean-2")?.seasons["poletje-december"][1], 380);
+    assert.equal(personRateCard("garden-3")?.seasons.zima[2], 330);
+    assert.equal(personRateCard("garden-3")?.seasons["pomlad-jesen"][1], 320);
+    assert.equal(personRateCard("garden-3")?.seasons["poletje-december"][2], 400);
+    const beach = personRateCard("beach-4");
+    assert.equal(beach?.seasons.zima[4], 560);
+    assert.equal(beach?.seasons.zima[3], 470);
+    assert.equal(beach?.seasons["pomlad-jesen"][2], 490);
+    assert.equal(beach?.seasons["poletje-december"][1], 520);
+    assert.equal(beach?.discount, 90);
+    assert.equal(JSON.stringify(PERSON_RATE_CARDS).includes("534"), false);
+    assert.equal(JSON.stringify(PERSON_RATE_CARDS).includes("590"), false);
+  });
+
+  it("obdobja kanala se stikajo, julij 9.–13. je v dveh sezonah", () => {
+    const spring = PERSON_SEASONS.find((season) => season.id === "pomlad-jesen");
+    const summer = PERSON_SEASONS.find((season) => season.id === "poletje-december");
+    assert.equal(spring?.ranges[0].to, "07-13");
+    assert.equal(summer?.ranges[0].from, "07-09");
+    assert.equal(summer?.ranges[0].to, "09-30");
+    assert.equal(spring?.ranges[1].from, "10-01");
   });
 });
