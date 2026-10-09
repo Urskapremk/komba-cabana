@@ -46,8 +46,8 @@ export function YearEarnings({
       <div className="flex flex-col gap-3">
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
           Januar in februar sta zaprta zaradi obnove. Odpremo marca: od takrat je vsak bungalov zaseden
-          vsako noč leta {EARNINGS_YEAR}. Cena je web cena za polno število oseb: 4 pri Bungalowu I in
-          Beach Villi, 2 pri II in III. Ostane = polna cena − agencija − early booking. Oba odbitka sta
+          vsako noč leta {EARNINGS_YEAR}. Pri vseh bungalovih velja web cena za 2 osebi. 4 osebe so izjema
+          in v zaslužek niso vštete. Ostane = polna cena − agencija − early booking. Oba odbitka sta
           od polne cene, z odstotki iz cenika. 9.–13. 7. velja poletje. 19.–31. 12. je praznična cena,
           1.–18. 12. je zima.
         </p>
@@ -92,7 +92,7 @@ export function YearEarnings({
             <article key={card.id} className="rounded-2xl bg-card px-4 py-3 ring-1 ring-foreground/10">
               <h2 className="font-heading text-lg tracking-tight">{card.name}</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                {card.capacity} {card.capacity < 3 ? "osebi" : "osebe"} · vsaka noč
+                2 osebi · vsaka noč
               </p>
               <p className="mt-2 text-sm text-[#6b3058]">
                 Agencija {agency == null ? "ni vpisana" : formatPercent(agency)}
@@ -128,7 +128,7 @@ export function YearEarnings({
                   <th key={card.id} className={cn(head, "bg-[#e4eef2] text-right")} title={card.name}>
                     {UNIT_SHORT[card.id]}
                     <span className="mt-0.5 block text-[10px] font-normal tracking-normal normal-case">
-                      {card.capacity} {card.capacity < 3 ? "osebi" : "osebe"}
+                      2 osebi
                     </span>
                   </th>
                 ))}

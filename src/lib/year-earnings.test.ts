@@ -61,44 +61,45 @@ describe("zaslužek pri polni zasedenosti", () => {
     assert.equal(year.months[0].left, 0);
     assert.equal(year.months[2].closed, false);
     assert.equal(year.months[2].nights, 31);
-    assert.equal(year.months[2].gross, 56850);
+    assert.equal(year.months[2].gross, 46930);
     assert.equal(year.nights, 306);
     assert.equal(year.missingNights, 0);
-    assert.equal(year.units["ocean-1"].gross, 202870);
+    assert.equal(year.units["ocean-1"].gross, 160030);
     assert.equal(year.units["ocean-2"].gross, 128210);
     assert.equal(year.units["garden-3"].gross, 117550);
-    assert.equal(year.units["beach-4"].gross, 202870);
-    assert.equal(year.gross, 651500);
+    assert.equal(year.units["beach-4"].gross, 147790);
+    assert.equal(year.gross, 553580);
     assert.equal(year.agency, 0);
     assert.equal(year.early, 0);
-    assert.equal(year.left, 651500);
+    assert.equal(year.left, 553580);
   });
 
-  it("oba popusta odšteje od polne cene in pomnoži z odprtimi nočmi", () => {
+  it("oba popusta odšteje od cene za 2 osebi in pomnoži z odprtimi nočmi", () => {
     const commission = { ...emptyWebLift(), "ocean-1": 15 };
     const early = { ...emptyWebLift(), "ocean-1": 10 };
     const year = yearEarnings(2027, defaultPersonRates(), commission, early);
     const family = year.units["ocean-1"];
-    assert.equal(family.gross, 202870);
-    assert.equal(family.agency, 30512);
-    assert.equal(family.early, 20287);
-    assert.equal(family.left, 152071);
+    assert.equal(family.gross, 160030);
+    assert.equal(family.agency, 24086);
+    assert.equal(family.early, 16003);
+    assert.equal(family.left, 119941);
     const marchWinter = year.months[2].slices[0].units["ocean-1"];
     assert.equal(marchWinter.nights, 28);
-    assert.equal(marchWinter.nightlyGross, 560);
-    assert.equal(marchWinter.nightlyLeft, 420);
-    assert.equal(marchWinter.left, 11760);
+    assert.equal(marchWinter.nightlyGross, 420);
+    assert.equal(marchWinter.nightlyLeft, 315);
+    assert.equal(marchWinter.left, 8820);
     assert.equal(year.units["ocean-2"].left, 128210);
-    assert.equal(year.left, 651500 - (202870 - 152071));
+    assert.equal(year.left, 553580 - (160030 - 119941));
   });
 
-  it("noč brez cene 2027 ne šteje v ostanek", () => {
+  it("cena za 4 osebe se ne šteje, noč brez cene za 2 osebi ne šteje v ostanek", () => {
     const rates = emptyPersonRates();
     rates["ocean-1"].zima[4] = 560;
+    rates["ocean-1"].zima[2] = 420;
     const year = yearEarnings(2027, rates, emptyWebLift(), emptyWebLift());
     assert.equal(year.units["ocean-1"].nights, 306);
     assert.equal(year.units["ocean-1"].missingNights, 306 - 46);
-    assert.equal(year.units["ocean-1"].left, 560 * 46);
+    assert.equal(year.units["ocean-1"].left, 420 * 46);
     assert.ok(year.missingNights > 0);
   });
 });

@@ -52,6 +52,9 @@ export type SeasonSlice = {
 /** Januar in februar sta zaprta zaradi obnove. Odpremo marca. */
 export const CLOSED_MONTHS = [1, 2] as const;
 
+/** V zaslužku velja cena za 2 osebi. 4 osebe so izjema in se ne štejejo. */
+export const EARNINGS_GUESTS = 2;
+
 export function monthIsClosed(month: number): boolean {
   return (CLOSED_MONTHS as readonly number[]).includes(month);
 }
@@ -201,7 +204,7 @@ function lineForNights(
 
 /**
  * Zaslužek celega leta po mesecih pri polni zasedenosti.
- * Vsak bungalov je zaseden vsako odprto noč po web ceni za polno število oseb.
+ * Vsak bungalov je zaseden vsako odprto noč po web ceni za 2 osebi.
  * Januar in februar sta zaprta. Agencija in Early booking se odštejeta od polne cene.
  */
 export function yearEarnings(
@@ -237,7 +240,7 @@ export function yearEarnings(
       let left = 0;
       let missingNights = 0;
       for (const card of PERSON_RATE_CARDS) {
-        const amount = rates[card.id]?.[slice.seasonId]?.[card.capacity] ?? null;
+        const amount = rates[card.id]?.[slice.seasonId]?.[EARNINGS_GUESTS] ?? null;
         const line = lineForNights(slice.nights, amount, earlyBooking[card.id] ?? null, commission[card.id] ?? null);
         units[card.id] = line;
         gross += line.gross;
