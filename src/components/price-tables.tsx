@@ -232,15 +232,15 @@ export function PriceTables() {
               <h1 className="font-heading mt-2 text-4xl tracking-tight md:text-5xl">Kalkulacije cen</h1>
             </div>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Cene po osebah
+              Fiksne cene WEB
               <br />
               Variabilni razpon za kanale
             </p>
           </div>
           <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
-            Cene po osebah so na noč za spletno stran, Booking, Airbnb in Agodo. Polni penzion ni
-            vključen. Variabilne cene spodaj so razpon min in max iz predloga Optima. Vpis ostane v
-            brskalniku.
+            Fiksne cene WEB so na noč za spletno stran. Pri I, II in III je ista cena tudi na
+            Bookingu, Airbnbju in Agodi. Polni penzion ni vključen. Variabilne cene spodaj so razpon
+            min in max iz predloga Optima. Vpis ostane v brskalniku.
           </p>
         </div>
       </header>
@@ -313,7 +313,7 @@ function PersonRatesSection({
   return (
     <section id="osebe" className="flex w-full min-w-0 scroll-mt-6 flex-col gap-5">
       <div>
-        <h2 className="font-heading text-2xl tracking-tight">Cene po osebah</h2>
+        <h2 className="font-heading text-2xl tracking-tight">Fiksne cene WEB</h2>
         <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Cena na noč. Pri I, II in III je enaka na spletni strani, Bookingu, Airbnbju in Agodi.
           Beach Villa ima ceno samo na spletni strani. 9. 7.–13. 7. je v pomladi in v poletju.
