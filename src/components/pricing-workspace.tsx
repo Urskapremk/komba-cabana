@@ -281,7 +281,7 @@ export function PricingWorkspace() {
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
+      <main className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
         <SeasonTimeline
           segments={segments}
           arrival={workspace.arrival}
@@ -289,7 +289,7 @@ export function PricingWorkspace() {
           overlap={workspace.overlap}
         />
 
-        <section className="rounded-2xl bg-card p-4 shadow-[0_1px_0_rgba(40,32,18,0.06)] ring-1 ring-foreground/10 md:p-6">
+        <section className="min-w-0 rounded-2xl bg-card p-4 shadow-[0_1px_0_rgba(40,32,18,0.06)] ring-1 ring-foreground/10 md:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="font-heading text-2xl tracking-tight">Izračun bivanja</h2>
@@ -303,8 +303,8 @@ export function PricingWorkspace() {
             </Button>
           </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
-            <div className="flex flex-col gap-5">
+          <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+            <div className="flex min-w-0 flex-col gap-5">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="bungalow">Bungalov</Label>
                 <Select
@@ -483,7 +483,7 @@ export function PricingWorkspace() {
           </div>
         </section>
 
-        <section className="flex flex-col gap-5">
+        <section className="flex w-full min-w-0 flex-col gap-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="font-heading text-2xl tracking-tight">Cenik</h2>
@@ -535,7 +535,7 @@ function SeasonTimeline({
   const stay = stayMarker(arrival, departure);
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-heading text-2xl tracking-tight">Sezone</h2>
         <p className="text-sm text-muted-foreground">
@@ -543,7 +543,7 @@ function SeasonTimeline({
           {overlap === "praznicna" ? " · prazniki preglasijo zimo" : " · zima velja do 27. 12."}
         </p>
       </div>
-      <div className="rounded-2xl bg-card p-4 ring-1 ring-foreground/10">
+      <div className="min-w-0 rounded-2xl bg-card p-4 ring-1 ring-foreground/10">
         <div className="relative h-11 overflow-hidden rounded-lg">
           <div className="flex h-full">
             {segments.map((segment) => {
@@ -568,7 +568,7 @@ function SeasonTimeline({
             />
           ) : null}
         </div>
-        <div className="relative mt-2 h-4 text-[11px] text-muted-foreground">
+        <div className="relative mt-2 h-4 overflow-hidden text-[11px] text-muted-foreground">
           {[
             ["2027-01-11", "jan"],
             ["2027-04-01", "apr"],
@@ -642,7 +642,7 @@ function QuotePanel({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground">{bungalow.short}</p>
@@ -684,7 +684,34 @@ function QuotePanel({
         </p>
       ) : null}
 
-      <div className="overflow-x-auto">
+      <ul className="flex flex-col gap-3 md:hidden">
+        {quote.groups.map((group) => (
+          <li key={`${group.periodId}-${group.stayFrom}`} className="rounded-xl bg-muted/50 px-3 py-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="font-medium">{SEASON_LABEL[group.season]}</span>
+              <span className="text-sm tabular-nums">{nightLabel(group.nights)}</span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {formatDate(group.stayFrom)} – {formatDate(group.stayCheckout)}
+            </p>
+            <dl className="mt-3 grid grid-cols-3 gap-2 text-sm tabular-nums">
+              <div>
+                <dt className="text-xs text-muted-foreground">Min</dt>
+                <dd>{formatEuro(group.min === null ? null : group.min * group.nights)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Max</dt>
+                <dd>{formatEuro(group.max === null ? null : group.max * group.nights)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Izbrana</dt>
+                <dd>{formatEuro(group.chosen === null ? null : group.chosen * group.nights)}</dd>
+              </div>
+            </dl>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden max-w-full overflow-x-auto md:block">
         <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
@@ -748,7 +775,7 @@ function RateCard({
   return (
     <article
       id={bungalow.id === "beach-4" ? "beach-villa" : undefined}
-      className="scroll-mt-6 overflow-hidden rounded-2xl ring-1 ring-foreground/10"
+      className="w-full min-w-0 max-w-full scroll-mt-6 overflow-hidden rounded-2xl ring-1 ring-foreground/10"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1c1915] px-4 py-3 text-[#f6f1e7]">
         <h3 className="font-heading text-lg tracking-tight">{bungalow.title}</h3>
@@ -772,7 +799,18 @@ function RateCard({
           bungalovih, vključno s prazničnim oknom 19. 12. 2027–10. 1. 2028.
         </p>
       ) : null}
-      <div className="overflow-x-auto bg-card">
+      <ul className="divide-y divide-border/70 bg-card md:hidden">
+        {PERIODS.map((period) => (
+          <RateRowMobile
+            key={period.id}
+            bungalow={bungalow}
+            period={period}
+            price={prices[period.id]}
+            onChange={(next) => onChange(period.id, next)}
+          />
+        ))}
+      </ul>
+      <div className="hidden max-w-full overflow-x-auto bg-card md:block">
         <table className="w-full min-w-[760px] text-sm">
           <thead>
             <tr className="bg-[#efe6d4] text-left text-xs tracking-wide text-[#5c5142] uppercase">
@@ -798,6 +836,61 @@ function RateCard({
         </table>
       </div>
     </article>
+  );
+}
+
+function rateMeta(bungalow: Bungalow, period: Period, price: Money) {
+  const tone = period.id === "prazniki" ? "poletje-december" : period.season;
+  const original = OPTIMA_PRICES[bungalow.id][period.id];
+  return {
+    tone,
+    edited: !sameMoney(price, original),
+    gap: spread(price),
+    inverted: price.min !== null && price.max !== null && price.min > price.max,
+    pending: bungalow.source === "rocno" && price.min === null && price.max === null,
+  };
+}
+
+function RateRowMobile({
+  bungalow,
+  period,
+  price,
+  onChange,
+}: {
+  bungalow: Bungalow;
+  period: Period;
+  price: Money;
+  onChange: (next: Money) => void;
+}) {
+  const meta = rateMeta(bungalow, period, price);
+  return (
+    <li className={cn("px-4 py-3", SEASON_SOFT[meta.tone])}>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="font-medium">{SEASON_LABEL[period.season]}</span>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {meta.gap ? `${formatEuro(meta.gap.euros)} · ${formatPercent(meta.gap.percent)}` : "—"}
+        </span>
+      </div>
+      <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+        {formatDate(period.from)} – {formatDate(period.to)}
+        {meta.edited ? " · prilagojeno" : ""}
+        {meta.inverted ? " · min je višji od max" : ""}
+      </p>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <EuroInput
+          label={`${bungalow.short}, ${SEASON_LABEL[period.season]}, min cena`}
+          value={price.min}
+          pending={meta.pending}
+          onChange={(min) => onChange({ ...price, min })}
+        />
+        <EuroInput
+          label={`${bungalow.short}, ${SEASON_LABEL[period.season]}, max cena`}
+          value={price.max}
+          pending={meta.pending}
+          onChange={(max) => onChange({ ...price, max })}
+        />
+      </div>
+    </li>
   );
 }
 
