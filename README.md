@@ -6,7 +6,7 @@ Fiksne cene WEB so iz spletne strani. Pri bungalovih I, II in III je ista cena t
 
 Variabilne cene so razpon min in max iz predloga Optima Plus, izhodišče 2026 ob letu 2027. Beach Villa IV v letu 2026 ni bila v ceniku. Vpis ostane v brskalniku.
 
-Zavihek Zaslužek sešteje web cene po mesecih leta 2027, če so vsi bungalovi zasedeni vsako odprto noč. Januar in februar sta zaprta zaradi obnove, odpremo marca. Pri vseh bungalovih velja cena za 2 osebi. 4 osebe so izjema in v zaslužek niso vštete. Agencija in Early booking se odštejeta od polne cene. Zraven sta minimalne cene in pravila gap filla iz pisma za 2026. Minimalna cena 2027 je 120 € na osebo, pri vseh bungalovih. Provizijo agencije in Early booking vpišeš v odstotkih pri vsakem bungalovu. Pod ceno na osebo je polna cena, minus agencija, minus Early booking, in koliko ostane. Oba odbitka sta od polne cene.
+Zavihek Zasedenost vzame potrjene, plačane in delno plačane rezervacije 2026. Preklicane niso vštete. Noč šteje enkrat na bungalov. Ocena 2027 prenese ta mesečni delež na web ceno za 2 osebi. Zavihek Zaslužek sešteje web cene po mesecih leta 2027, če so vsi bungalovi zasedeni vsako odprto noč. Januar in februar sta zaprta zaradi obnove, odpremo marca. Pri vseh bungalovih velja cena za 2 osebi. 4 osebe so izjema in v zaslužek niso vštete. Agencija in Early booking se odštejeta od polne cene. Zraven sta minimalne cene in pravila gap filla iz pisma za 2026. Minimalna cena 2027 je 120 € na osebo, pri vseh bungalovih. Provizijo agencije in Early booking vpišeš v odstotkih pri vsakem bungalovu. Pod ceno na osebo je polna cena, minus agencija, minus Early booking, in koliko ostane. Oba odbitka sta od polne cene.
 
 ## Zagon
 

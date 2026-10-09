@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { OccupancyView } from "@/components/occupancy-view";
 import { YearEarnings } from "@/components/year-earnings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -337,15 +338,19 @@ export function PriceTables() {
   const dirty = BUNGALOWS.some((bungalow) =>
     PERIODS.some((period) => !sameMoney(prices[bungalow.id][period.id], OPTIMA_PRICES[bungalow.id][period.id])),
   );
-  const [tab, setTab] = useState<"cenik" | "zasluzek">("cenik");
+  const [tab, setTab] = useState<"cenik" | "zasluzek" | "zasedenost">("cenik");
   useEffect(() => {
-    const read = () => setTab(window.location.hash === "#zasluzek" ? "zasluzek" : "cenik");
+    const read = () => {
+      if (window.location.hash === "#zasluzek") setTab("zasluzek");
+      else if (window.location.hash === "#zasedenost") setTab("zasedenost");
+      else setTab("cenik");
+    };
     read();
     window.addEventListener("hashchange", read);
     return () => window.removeEventListener("hashchange", read);
   }, []);
-  function selectTab(next: "cenik" | "zasluzek") {
-    const hash = next === "zasluzek" ? "#zasluzek" : "#cenik";
+  function selectTab(next: "cenik" | "zasluzek" | "zasedenost") {
+    const hash = next === "cenik" ? "#cenik" : `#${next}`;
     if (window.location.hash !== hash) window.location.hash = hash;
     setTab(next);
   }
@@ -365,6 +370,12 @@ export function PriceTables() {
                   Polna zasedenost
                   <br />
                   odprto od marca
+                </>
+              ) : tab === "zasedenost" ? (
+                <>
+                  Dejanska zasedenost
+                  <br />
+                  leto 2026
                 </>
               ) : (
                 <>
@@ -390,6 +401,13 @@ export function PriceTables() {
             >
               Zaslužek
             </Button>
+            <Button
+              variant={tab === "zasedenost" ? "default" : "outline"}
+              aria-selected={tab === "zasedenost"}
+              onClick={() => selectTab("zasedenost")}
+            >
+              Zasedenost
+            </Button>
           </div>
           {tab === "cenik" ? (
             <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
@@ -405,6 +423,14 @@ export function PriceTables() {
       <main className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col gap-12 px-4 py-8 md:px-6 md:py-10">
         {tab === "zasluzek" ? (
           <YearEarnings
+            web={cenik.personRates}
+            next={cenik.web2027}
+            commission={commission}
+            earlyBooking={earlyBooking}
+          />
+        ) : null}
+        {tab === "zasedenost" ? (
+          <OccupancyView
             web={cenik.personRates}
             next={cenik.web2027}
             commission={commission}
