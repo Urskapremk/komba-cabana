@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { OccupancyView } from "@/components/occupancy-view";
 import { YearEarnings } from "@/components/year-earnings";
 import { Button } from "@/components/ui/button";
@@ -224,21 +224,13 @@ export function PriceTables() {
   const commission = cenik.commission ?? emptyWebLift();
   const earlyBooking = cenik.earlyBooking ?? emptyWebLift();
   const prices = cenik.prices;
+  const edited = useRef(false);
 
-  function commit(next: Cenik) {
+  function savedEnvelope(next: Cenik) {
     const synced = mirrorBeach(next);
-    setDraft(synced);
-    let envelope: Record<string, unknown> = {};
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) envelope = JSON.parse(raw) as Record<string, unknown>;
-    } catch {
-      envelope = {};
-    }
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        ...envelope,
+    return {
+      synced,
+      payload: {
         prices: next.prices,
         offers: next.offers,
         personRates: next.personRates,
@@ -247,9 +239,53 @@ export function PriceTables() {
         commission: synced.commission ?? emptyWebLift(),
         earlyBooking: synced.earlyBooking ?? emptyWebLift(),
         lodgeOccupancy: synced.lodgeOccupancy,
-      }),
-    );
+      },
+    };
   }
+
+  function commit(next: Cenik) {
+    edited.current = true;
+    const { synced, payload } = savedEnvelope(next);
+    setDraft(synced);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    void fetch("/api/cenik", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  useEffect(() => {
+    let cancel = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/cenik", { cache: "no-store" });
+        if (!response.ok || cancel || edited.current) return;
+        const body = (await response.json()) as { cenik?: unknown };
+        const parsed = body.cenik ? readCenik(body.cenik) : null;
+        if (cancel || edited.current) return;
+        if (parsed) {
+          const { synced, payload } = savedEnvelope(parsed);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+          setDraft(synced);
+          return;
+        }
+        const localRaw = localStorage.getItem(STORAGE_KEY);
+        if (localRaw && parseCenik(localRaw)) {
+          await fetch("/api/cenik", {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: localRaw,
+          });
+        }
+      } catch {
+        // Vpis v brskalniku ostane, tudi če strežnik ne odgovori.
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, []);
 
   function setPrice(unitId: string, periodId: string, next: Money) {
     commit({
@@ -416,8 +452,8 @@ export function PriceTables() {
             <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
               Pri vsakem bungalovu so najprej fiksne cene WEB, pod njimi variabilne. Fiksne cene so na
               noč za spletno stran. Pri I, II in III je ista cena tudi na Bookingu, Airbnbju in Agodi.
-              Polni penzion ni vključen. Leto 2027 je v isti tabeli, desno od trenutnih cen. Vpis ostane
-              v brskalniku.
+              Polni penzion ni vključen. Leto 2027 je v isti tabeli, desno od trenutnih cen. Vpis se shrani
+              na strežnik, zato ostane tudi, če se povezava do strani zamenja.
             </p>
           ) : null}
         </div>
