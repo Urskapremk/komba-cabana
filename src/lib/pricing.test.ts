@@ -22,7 +22,9 @@ import {
   guestCounts,
   personRateCard,
   pricePerPerson,
+  beachWeb2027FromFamily,
   defaultPersonRates,
+  emptyPersonRates,
   liftAmount,
   liftPersonUnit,
   parsePercent,
@@ -280,6 +282,26 @@ describe("cene po osebah", () => {
     assert.equal(cenik?.webLift["ocean-1"], 7.5);
     assert.equal(cenik?.webLift["ocean-2"], null);
     assert.equal(cenik?.webLift["beach-4"], null);
+  });
+
+  it("Beach Villa 2027 prevzame cene Bungalow I", () => {
+    const web = defaultPersonRates();
+    const fromWeb = beachWeb2027FromFamily(emptyPersonRates(), web);
+    assert.equal(fromWeb.zima[4], 560);
+    assert.equal(fromWeb.zima[3], 490);
+    assert.equal(fromWeb.zima[2], 420);
+    assert.equal(fromWeb.zima[1], 420);
+    assert.equal(fromWeb["pomlad-jesen"][3], 600);
+    assert.equal(fromWeb["poletje-december"][2], 560);
+    assert.equal(fromWeb.zima[2] === web["beach-4"].zima[2], false);
+    const next = emptyPersonRates();
+    next["ocean-1"].zima[4] = 588;
+    next["ocean-1"]["poletje-december"][1] = 588;
+    const mixed = beachWeb2027FromFamily(next, web);
+    assert.equal(mixed.zima[4], 588);
+    assert.equal(mixed.zima[3], 490);
+    assert.equal(mixed["poletje-december"][1], 588);
+    assert.equal(mixed["poletje-december"][4], 700);
   });
 
   it("ceno bungalova deli na osebo", () => {

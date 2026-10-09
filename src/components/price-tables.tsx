@@ -21,6 +21,7 @@ import {
   type PersonSeasonId,
   type Prices,
   type WebLift,
+  beachWeb2027FromFamily,
   clonePrices,
   datesDiffer,
   defaultPersonRates,
@@ -79,6 +80,17 @@ function parseCenik(raw: string | null): Cenik | null {
   }
 }
 
+function mirrorBeach(cenik: Cenik): Cenik {
+  return {
+    ...cenik,
+    webLift: cenik.webLift ?? emptyWebLift(),
+    web2027: {
+      ...cenik.web2027,
+      "beach-4": beachWeb2027FromFamily(cenik.web2027, cenik.personRates),
+    },
+  };
+}
+
 function blankCenik(): Cenik {
   return {
     prices: clonePrices(),
@@ -94,14 +106,16 @@ function EuroInput({
   onChange,
   label,
   pending,
+  readOnly,
 }: {
   value: number | null;
   onChange: (next: number | null) => void;
   label: string;
   pending?: boolean;
+  readOnly?: boolean;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
-  const text = draft === null ? (value === null ? "" : String(value)) : draft;
+  const text = draft === null || readOnly ? (value === null ? "" : String(value)) : draft;
 
   return (
     <div className="relative min-w-0">
@@ -110,11 +124,15 @@ function EuroInput({
         size={4}
         inputMode="numeric"
         autoComplete="off"
+        readOnly={readOnly}
         value={text}
         placeholder="—"
-        onFocus={() => setDraft(value === null ? "" : String(value))}
+        onFocus={() => {
+          if (!readOnly) setDraft(value === null ? "" : String(value));
+        }}
         onBlur={() => setDraft(null)}
         onChange={(event) => {
+          if (readOnly) return;
           const raw = event.target.value.replace(/\D/g, "").slice(0, 6);
           setDraft(raw);
           onChange(raw === "" ? null : Number(raw));
@@ -181,12 +199,13 @@ export function PriceTables() {
   const storedRaw = useSyncExternalStore(subscribeStore, readStore, () => null);
   const stored = useMemo(() => parseCenik(storedRaw), [storedRaw]);
   const [draft, setDraft] = useState<Cenik | null>(null);
-  const cenik = draft ?? stored ?? blankCenik();
+  const cenik = mirrorBeach(draft ?? stored ?? blankCenik());
   const webLift = cenik.webLift ?? emptyWebLift();
   const prices = cenik.prices;
 
   function commit(next: Cenik) {
-    setDraft(next);
+    const synced = mirrorBeach(next);
+    setDraft(synced);
     let envelope: Record<string, unknown> = {};
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -201,8 +220,8 @@ export function PriceTables() {
         prices: next.prices,
         offers: next.offers,
         personRates: next.personRates,
-        web2027: next.web2027,
-        webLift: next.webLift ?? emptyWebLift(),
+        web2027: synced.web2027,
+        webLift: synced.webLift ?? emptyWebLift(),
       }),
     );
   }
@@ -393,9 +412,10 @@ function WebCompareSection({
         <h2 className="font-heading text-2xl tracking-tight">Fiksne cene WEB</h2>
         <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Trenutna cena in leto 2027 sta v isti vrstici. Pri I, II in III je trenutna cena enaka na
-          spletni strani, Bookingu, Airbnbju in Agodi. Beach Villa je samo na spletni strani. Pod
-          ceno bungalova je preračun na osebo. Pri 2027 vpišeš odstotek in dvigneš vse cene tega
-          bungalova od trenutnega WEB. Prazniki 2027 trajajo do 10. 1. 2028.
+          spletni strani, Bookingu, Airbnbju in Agodi. Beach Villa je samo na spletni strani, v letu
+          2027 pa ima enake cene kot Bungalow I - Family. Pod ceno bungalova je preračun na osebo.
+          Pri 2027 vpišeš odstotek in dvigneš vse cene tega bungalova od trenutnega WEB. Prazniki
+          2027 trajajo do 10. 1. 2028.
         </p>
       </div>
       {PERSON_RATE_CARDS.map((card) => (
@@ -439,6 +459,7 @@ function WebCompareCard({
 }) {
   const card = personRateCard(unitId);
   if (!card || !current || !next) return null;
+  const linkedToFamily = unitId === "beach-4";
   const guests = personColumns(card.capacity);
   const currentChanged = PERSON_SEASONS.some((season) =>
     guests.some((count) => current[season.id]?.[count] !== card.seasons[season.id][count]),
@@ -457,9 +478,11 @@ function WebCompareCard({
           <Button size="sm" variant="secondary" disabled={!currentChanged} onClick={onResetCurrent}>
             Ponastavi WEB
           </Button>
-          <Button size="sm" variant="secondary" disabled={!nextChanged} onClick={onResetNext}>
-            Počisti 2027
-          </Button>
+          {linkedToFamily ? null : (
+            <Button size="sm" variant="secondary" disabled={!nextChanged} onClick={onResetNext}>
+              Počisti 2027
+            </Button>
+          )}
         </div>
       </div>
       <p className="bg-[#f8f1e4] px-4 py-2.5 text-sm leading-relaxed text-[#3f3424]">
@@ -467,11 +490,20 @@ function WebCompareCard({
         {card.note ? ` ${card.note}` : ""}
       </p>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#e4d8c4] bg-[#f3e6c8] px-4 py-2">
-        <p className="text-sm text-[#3f3424]">
-          <span className="font-medium">2027</span>
-          <span className="ml-2">vse cene od WEB</span>
-        </p>
-        <PercentLift label={`${card.name}, odstotek dviga 2027`} value={lift} onApply={onLift} />
+        {linkedToFamily ? (
+          <p className="text-sm text-[#3f3424]">
+            <span className="font-medium">2027</span>
+            <span className="ml-2">enako kot Bungalow I - Family</span>
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-[#3f3424]">
+              <span className="font-medium">2027</span>
+              <span className="ml-2">vse cene od WEB</span>
+            </p>
+            <PercentLift label={`${card.name}, odstotek dviga 2027`} value={lift} onApply={onLift} />
+          </>
+        )}
       </div>
       <div className="max-w-full overflow-hidden bg-card">
         <table className="w-full table-fixed border-collapse text-sm">
@@ -540,7 +572,8 @@ function WebCompareCard({
                       <EuroInput
                         label={`${card.name}, 2027, ${season.label}, ${guestLabel(count)}`}
                         value={amount}
-                        pending={amount == null}
+                        pending={amount == null && !linkedToFamily}
+                        readOnly={linkedToFamily}
                         onChange={(value) => onChangeNext(season.id, count, value)}
                       />
                       <PerPerson amount={amount} guests={count} />

@@ -664,6 +664,24 @@ export function liftAmount(amount: number | null, percent: number): number | nul
   return next;
 }
 
+/**
+ * WEB 2027 za Beach Villa je enak Bungalow I - Family.
+ * Vpisana cena 2027 pri I ima prednost, sicer velja trenutni WEB pri I.
+ */
+export function beachWeb2027FromFamily(web2027: PersonRates, web: PersonRates): PersonRates[string] {
+  const familyNext = web2027["ocean-1"];
+  const familyWeb = web["ocean-1"];
+  const seasons = {} as PersonRates[string];
+  for (const season of PERSON_SEASONS) {
+    const row: Record<number, number | null> = {};
+    for (const count of personColumns(4)) {
+      row[count] = familyNext?.[season.id]?.[count] ?? familyWeb?.[season.id]?.[count] ?? null;
+    }
+    seasons[season.id] = row;
+  }
+  return seasons;
+}
+
 /** Vse cene enega bungalova, zaokrožene na evro. */
 export function liftPersonUnit(
   unitId: string,
