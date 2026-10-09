@@ -21,6 +21,7 @@ import {
   emptyOffers,
   guestCounts,
   personRateCard,
+  childPrices,
   pricePerPerson,
   beachWeb2027FromFamily,
   defaultPersonRates,
@@ -311,6 +312,19 @@ describe("cene po osebah", () => {
     assert.equal(pricePerPerson(420, 1), 420);
     assert.equal(pricePerPerson(670, 4), 168);
     assert.equal(pricePerPerson(null, 4), null);
+  });
+
+  it("otrok pri 3. ali 4. osebi ima popust od cene odraslega", () => {
+    const winter = childPrices(pricePerPerson(560, 4)!);
+    assert.equal(winter[0].free, true);
+    assert.equal(winter[0].amount, 0);
+    assert.equal(winter[1].amount, 70);
+    assert.equal(winter[1].offPercent, 50);
+    assert.equal(winter[2].amount, 112);
+    assert.equal(winter[2].offPercent, 20);
+    const three = childPrices(pricePerPerson(490, 3)!);
+    assert.equal(three[1].amount, 82);
+    assert.equal(three[2].amount, 130);
   });
 
   it("obdobja kanala se stikajo, julij 9.–13. je v dveh sezonah", () => {

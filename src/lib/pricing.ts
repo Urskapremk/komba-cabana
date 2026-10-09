@@ -637,6 +637,27 @@ export function pricePerPerson(amount: number | null, guests: number): number | 
   return Math.round(amount / guests);
 }
 
+export type ChildBand = {
+  id: string;
+  label: string;
+  amount: number;
+  free: boolean;
+  offPercent: number;
+};
+
+/** Cena otroka od cene odrasle osebe. Velja, ko je 3. ali 4. oseba otrok. */
+export function childPrices(adult: number): ChildBand[] {
+  return [
+    { id: "0-5", label: "0–5 let", amount: 0, free: true, offPercent: 100 },
+    { id: "5-10", label: "5–10 let", amount: Math.round(adult * 0.5), free: false, offPercent: 50 },
+    { id: "10-15", label: "10–15 let", amount: Math.round(adult * 0.8), free: false, offPercent: 20 },
+  ];
+}
+
+export function childStaySentence(): string {
+  return "Če je 3. ali 4. oseba otrok: 0–5 let je bivanje brezplačno, 5–10 let −50 %, 10–15 let −20 %.";
+}
+
 export type WebLift = Record<string, number | null>;
 
 export function emptyWebLift(): WebLift {

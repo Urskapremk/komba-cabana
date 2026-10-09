@@ -22,6 +22,8 @@ import {
   type Prices,
   type WebLift,
   beachWeb2027FromFamily,
+  childPrices,
+  childStaySentence,
   clonePrices,
   datesDiffer,
   defaultPersonRates,
@@ -454,6 +456,7 @@ function WebCompareCard({
       </div>
       <p className="bg-[#f8f1e4] px-4 py-2.5 text-sm leading-relaxed text-[#3f3424]">
         {discountSentence(card)}
+        {card.capacity >= 3 ? ` ${childStaySentence()}` : ""}
         {card.note ? ` ${card.note}` : ""}
       </p>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#e4d8c4] bg-[#f3e6c8] px-4 py-2">
@@ -633,6 +636,15 @@ function PerPerson({ amount, guests }: { amount: number | null; guests: number }
       {formatEuro(each)}
       <span className="block">na osebo</span>
       <span className="block">cena za odraslo osebo</span>
+      {guests >= 3 ? (
+        <span className="mt-1 block border-t border-[#e4d8c4] pt-1 text-[10px] leading-snug">
+          {childPrices(each).map((band) => (
+            <span key={band.id} className="block">
+              {band.free ? `${band.label}: brezplačno` : `${band.label}: ${formatEuro(band.amount)} (−${band.offPercent} %)`}
+            </span>
+          ))}
+        </span>
+      ) : null}
     </span>
   );
 }
