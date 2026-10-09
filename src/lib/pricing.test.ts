@@ -3,10 +3,15 @@ import { describe, it } from "node:test";
 import {
   CALENDAR_END,
   CALENDAR_START,
+  COMPARE_PERIODS,
   OPTIMA_PRICES,
+  RATES_2026,
   calendarLength,
   chosenNightly,
+  datesDiffer,
+  floor2026,
   nightsBetween,
+  priceDelta,
   quoteStay,
   resolvePeriod,
   resolvedSegments,
@@ -110,6 +115,41 @@ describe("koledar", () => {
     assert.equal(december?.to, "2027-12-18");
     assert.equal(holiday?.from, "2027-12-19");
     assert.equal(holiday?.to, "2028-01-10");
+  });
+});
+
+describe("primerjava 2026 in 2027", () => {
+  it("pri bungalovu I dvigne min in zoži max", () => {
+    assert.equal(priceDelta(RATES_2026["ocean-1"]["zima-1"].min, OPTIMA_PRICES["ocean-1"]["zima-1"].min)?.euros, 70);
+    assert.equal(priceDelta(RATES_2026["ocean-1"]["poletje-1"].max, OPTIMA_PRICES["ocean-1"]["poletje-1"].max)?.euros, -83);
+    assert.equal(RATES_2026["ocean-1"]["jesen-1"].min, 565);
+    assert.equal(RATES_2026["ocean-1"]["prazniki"].max, 846);
+  });
+
+  it("pri II in III dvigne obe meji, poletni max III ostane 400", () => {
+    assert.equal(priceDelta(220, OPTIMA_PRICES["ocean-2"]["zima-1"].min)?.euros, 55);
+    assert.equal(RATES_2026["garden-3"]["poletje-1"].max, 400);
+    assert.equal(priceDelta(400, OPTIMA_PRICES["garden-3"]["poletje-1"].max)?.euros, 33);
+    assert.deepEqual(RATES_2026["ocean-2"]["prazniki"], { min: 280, max: 431 });
+    assert.deepEqual(RATES_2026["garden-3"]["prazniki"], { min: 280, max: 431 });
+  });
+
+  it("zimski december 2026 konča 18., predlog 2027 pa 27.", () => {
+    const december = COMPARE_PERIODS.find((period) => period.id === "zima-2");
+    assert.ok(december);
+    assert.equal(datesDiffer(december), true);
+    assert.equal(december.to2026, "2026-12-18");
+    assert.equal(december.to2027, "2027-12-27");
+    assert.equal(datesDiffer(COMPARE_PERIODS[0]), false);
+  });
+
+  it("pozna minimalne cene samo tam, kjer jih pismo določi", () => {
+    assert.deepEqual(floor2026("ocean-1", "zima-1"), { amount: 475, label: "izven sezone" });
+    assert.deepEqual(floor2026("ocean-1", "poletje-1"), { amount: 570, label: "v sezoni" });
+    assert.equal(floor2026("ocean-1", "prazniki"), null);
+    assert.equal(floor2026("ocean-1", "jesen-1"), null);
+    assert.equal(floor2026("garden-3", "zima-1")?.amount, 200);
+    assert.equal(floor2026("beach-4", "zima-1"), null);
   });
 });
 

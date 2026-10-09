@@ -16,7 +16,7 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "Kalkulacije cen · Komba Cabana",
   description:
-    "Izračun nočitev za Ocean, Garden in Beach Villa bungalove po predlogu cen Optima Plus za sezono 2027/28.",
+    "Primerjava izhodiščnih cen 2026 in predloga Optima Plus za 2027. Cene bungalovov Komba Cabana urejaš v tabelah.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

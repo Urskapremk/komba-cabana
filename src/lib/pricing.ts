@@ -365,3 +365,112 @@ export function segmentLabel(period: Period): string {
   if (period.id === "poletje-1") return "Poletje";
   return SEASON_LABEL[period.season];
 }
+
+export type ComparePeriod = {
+  id: string;
+  season: SeasonId;
+  from2026: string;
+  to2026: string;
+  from2027: string;
+  to2027: string;
+};
+
+/** Ista sezonska vrstica v izhodišču 2026 in predlogu 2027. December zime se po dolžini razlikuje. */
+export const COMPARE_PERIODS: ComparePeriod[] = [
+  {
+    id: "zima-1",
+    season: "zima",
+    from2026: "2026-01-11",
+    to2026: "2026-03-31",
+    from2027: "2027-01-11",
+    to2027: "2027-03-31",
+  },
+  {
+    id: "pomlad-1",
+    season: "pomlad-jesen",
+    from2026: "2026-04-01",
+    to2026: "2026-07-08",
+    from2027: "2027-04-01",
+    to2027: "2027-07-08",
+  },
+  {
+    id: "poletje-1",
+    season: "poletje-december",
+    from2026: "2026-07-09",
+    to2026: "2026-09-30",
+    from2027: "2027-07-09",
+    to2027: "2027-09-30",
+  },
+  {
+    id: "jesen-1",
+    season: "pomlad-jesen",
+    from2026: "2026-10-01",
+    to2026: "2026-11-30",
+    from2027: "2027-10-01",
+    to2027: "2027-11-30",
+  },
+  {
+    id: "zima-2",
+    season: "zima",
+    from2026: "2026-12-01",
+    to2026: "2026-12-18",
+    from2027: "2027-12-01",
+    to2027: "2027-12-27",
+  },
+  {
+    id: "prazniki",
+    season: "poletje-december",
+    from2026: "2026-12-19",
+    to2026: "2027-01-10",
+    from2027: "2027-12-19",
+    to2027: "2028-01-10",
+  },
+];
+
+function yearRates(pairs: number[]): Record<string, Money> {
+  return Object.fromEntries(
+    COMPARE_PERIODS.map((period, index) => [
+      period.id,
+      { min: pairs[index * 2], max: pairs[index * 2 + 1] },
+    ]),
+  );
+}
+
+/** Izhodiščne bruto cene 2026 pri polni kapaciteti. Beach Ville v tem letu ni. */
+export const RATES_2026: Record<string, Record<string, Money>> = {
+  "ocean-1": yearRates([490, 731, 525, 750, 585, 836, 565, 807, 525, 750, 550, 846]),
+  "ocean-2": yearRates([220, 328, 230, 354, 300, 429, 230, 354, 220, 338, 280, 431]),
+  "garden-3": yearRates([220, 328, 230, 354, 280, 400, 230, 354, 220, 338, 280, 431]),
+};
+
+export const COMPARE_UNITS = [
+  { id: "ocean-1", name: "Bungalov I", detail: "Ocean · za 4 osebe · 4+0", has2026: true },
+  { id: "ocean-2", name: "Bungalov II", detail: "Ocean · 2+0", has2026: true },
+  { id: "garden-3", name: "Bungalov III", detail: "Garden · 2+0", has2026: true },
+  { id: "beach-4", name: "Beach Villa IV", detail: "Bungalow IV · v letu 2026 ni bil v ceniku", has2026: false },
+] as const;
+
+export const GAP_FILL_2026 = [
+  { id: "off", when: "Izven sezone", rule: "Najmanj 3 noči. 2 noči +10 %, 1 noč +30 %." },
+  { id: "season", when: "V sezoni", rule: "Najmanj 3 noči." },
+  { id: "newyear", when: "Novo leto", rule: "Najmanj 3 noči." },
+] as const;
+
+export function priceDelta(base: number | null, next: number | null): { euros: number; percent: number } | null {
+  if (base === null || next === null || base === 0) return null;
+  const euros = next - base;
+  return { euros, percent: (euros / base) * 100 };
+}
+
+export function datesDiffer(period: ComparePeriod): boolean {
+  return period.from2026.slice(5) !== period.from2027.slice(5) || period.to2026.slice(5) !== period.to2027.slice(5);
+}
+
+/** Minimalna cena iz pisma za 2026. Ramena in novo leto tam nista posebej določena. */
+export function floor2026(unitId: string, periodId: string): { amount: number; label: string } | null {
+  if (unitId === "ocean-2" || unitId === "garden-3") return { amount: 200, label: "celo leto" };
+  if (unitId !== "ocean-1") return null;
+  if (periodId === "zima-1" || periodId === "zima-2") return { amount: 475, label: "izven sezone" };
+  if (periodId === "poletje-1") return { amount: 570, label: "v sezoni" };
+  return null;
+}

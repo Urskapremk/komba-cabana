@@ -1,5 +1,5 @@
-import { PricingWorkspace } from "@/components/pricing-workspace";
+import { PriceTables } from "@/components/price-tables";
 
 export default function Home() {
-  return <PricingWorkspace />;
+  return <PriceTables />;
 }

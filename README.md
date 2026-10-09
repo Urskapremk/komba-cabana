@@ -1,8 +1,10 @@
 # Kalkulacije cen · Komba Cabana
 
-Delovno mesto za sezono 2027/28. Ocean Bungalov I, Ocean Bungalow II in Garden Bungalov III imajo predlagane cene na noč od Optima Plus. Beach Villa IV ima ista obdobja; min in max vpišeš sama.
+Tabele za primerjavo izhodišča 2026 in predloga Optima Plus za 2027. Cene so na noč, bruto, pri polni kapaciteti.
 
-Izračun bivanja sešteje noči med prihodom in odhodom. Kjer se zimsko obdobje (1.–27. 12.) prekriva s prazniki (19. 12.–10. 1.), privzeto velja praznična cena. Pozicija med min in max je zaokrožena na evro na noč. Prilagoditve ostanejo v brskalniku.
+Bungalov I, II in III imajo obe leti. Beach Villa IV v letu 2026 ni bila v ceniku. Predlog 2027 lahko popraviš v tabeli. Sprememba je razlika proti letu 2026. Vpis ostane v brskalniku.
+
+Zraven sta minimalne cene in pravila gap filla iz pisma za 2026.
 
 ## Zagon
 
