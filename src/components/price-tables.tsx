@@ -20,12 +20,14 @@ import {
   type PersonRates,
   type PersonSeasonId,
   type Prices,
+  type WebLift,
   clonePrices,
   datesDiffer,
   defaultPersonRates,
   discountSentence,
   emptyOffers,
   emptyPersonRates,
+  emptyWebLift,
   floor2026,
   formatDate,
   formatEuro,
@@ -36,6 +38,8 @@ import {
   personRateCard,
   pricePerPerson,
   priceDelta,
+  liftPersonUnit,
+  parsePercent,
   readCenik,
   sameMoney,
   spread,
@@ -43,7 +47,13 @@ import {
 
 const STORAGE_KEY = "komba-cabana-cenik-v1";
 
-type Cenik = { prices: Prices; offers: Offers; personRates: PersonRates; web2027: PersonRates };
+type Cenik = {
+  prices: Prices;
+  offers: Offers;
+  personRates: PersonRates;
+  web2027: PersonRates;
+  webLift: WebLift;
+};
 
 const SEASON_SOFT: Record<string, string> = {
   zima: "bg-[#f3f7f9]",
@@ -70,7 +80,13 @@ function parseCenik(raw: string | null): Cenik | null {
 }
 
 function blankCenik(): Cenik {
-  return { prices: clonePrices(), offers: emptyOffers(), personRates: defaultPersonRates(), web2027: emptyPersonRates() };
+  return {
+    prices: clonePrices(),
+    offers: emptyOffers(),
+    personRates: defaultPersonRates(),
+    web2027: emptyPersonRates(),
+    webLift: emptyWebLift(),
+  };
 }
 
 function EuroInput({
@@ -166,6 +182,7 @@ export function PriceTables() {
   const stored = useMemo(() => parseCenik(storedRaw), [storedRaw]);
   const [draft, setDraft] = useState<Cenik | null>(null);
   const cenik = draft ?? stored ?? blankCenik();
+  const webLift = cenik.webLift ?? emptyWebLift();
   const prices = cenik.prices;
 
   function commit(next: Cenik) {
@@ -185,6 +202,7 @@ export function PriceTables() {
         offers: next.offers,
         personRates: next.personRates,
         web2027: next.web2027,
+        webLift: next.webLift ?? emptyWebLift(),
       }),
     );
   }
@@ -248,6 +266,17 @@ export function PriceTables() {
     commit({
       ...cenik,
       web2027: { ...cenik.web2027, [unitId]: emptyPersonRates()[unitId] },
+      webLift: { ...webLift, [unitId]: null },
+    });
+  }
+
+  function liftWeb2027(unitId: string, percent: number) {
+    const lifted = liftPersonUnit(unitId, cenik.personRates[unitId], percent);
+    if (!lifted) return;
+    commit({
+      ...cenik,
+      web2027: { ...cenik.web2027, [unitId]: lifted },
+      webLift: { ...webLift, [unitId]: percent },
     });
   }
 
@@ -273,7 +302,7 @@ export function PriceTables() {
           <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
             Fiksne cene WEB so na noč za spletno stran. Pri I, II in III je ista cena tudi na
             Bookingu, Airbnbju in Agodi. Polni penzion ni vključen. Leto 2027 je v isti tabeli,
-            desno od trenutnih cen. Vpis ostane v brskalniku.
+            desno od trenutnih cen. Odstotek dvigne vse cene bungalova. Vpis ostane v brskalniku.
           </p>
         </div>
       </header>
@@ -282,10 +311,12 @@ export function PriceTables() {
         <WebCompareSection
           current={cenik.personRates}
           next={cenik.web2027}
+          lift={webLift}
           onChangeCurrent={setPersonRate}
           onChangeNext={setWeb2027}
           onResetCurrent={resetPersonRate}
           onResetNext={resetWeb2027}
+          onLift={liftWeb2027}
         />
 
         <Rules />
@@ -340,17 +371,21 @@ export function PriceTables() {
 function WebCompareSection({
   current,
   next,
+  lift,
   onChangeCurrent,
   onChangeNext,
   onResetCurrent,
   onResetNext,
+  onLift,
 }: {
   current: PersonRates;
   next: PersonRates;
+  lift: WebLift;
   onChangeCurrent: (unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
   onChangeNext: (unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
   onResetCurrent: (unitId: string) => void;
   onResetNext: (unitId: string) => void;
+  onLift: (unitId: string, percent: number) => void;
 }) {
   return (
     <section id="web-2027" className="flex w-full min-w-0 scroll-mt-6 flex-col gap-5">
@@ -359,7 +394,8 @@ function WebCompareSection({
         <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Trenutna cena in leto 2027 sta v isti vrstici. Pri I, II in III je trenutna cena enaka na
           spletni strani, Bookingu, Airbnbju in Agodi. Beach Villa je samo na spletni strani. Pod
-          ceno bungalova je preračun na osebo. Prazniki 2027 trajajo do 10. 1. 2028.
+          ceno bungalova je preračun na osebo. Pri 2027 vpišeš odstotek in dvigneš vse cene tega
+          bungalova od trenutnega WEB. Prazniki 2027 trajajo do 10. 1. 2028.
         </p>
       </div>
       {PERSON_RATE_CARDS.map((card) => (
@@ -368,10 +404,12 @@ function WebCompareSection({
           unitId={card.id}
           current={current[card.id]}
           next={next[card.id]}
+          lift={lift[card.id] ?? null}
           onChangeCurrent={(seasonId, guests, amount) => onChangeCurrent(card.id, seasonId, guests, amount)}
           onChangeNext={(seasonId, guests, amount) => onChangeNext(card.id, seasonId, guests, amount)}
           onResetCurrent={() => onResetCurrent(card.id)}
           onResetNext={() => onResetNext(card.id)}
+          onLift={(percent) => onLift(card.id, percent)}
         />
       ))}
     </section>
@@ -382,18 +420,22 @@ function WebCompareCard({
   unitId,
   current,
   next,
+  lift,
   onChangeCurrent,
   onChangeNext,
   onResetCurrent,
   onResetNext,
+  onLift,
 }: {
   unitId: string;
   current: PersonRates[string];
   next: PersonRates[string];
+  lift: number | null;
   onChangeCurrent: (seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
   onChangeNext: (seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
   onResetCurrent: () => void;
   onResetNext: () => void;
+  onLift: (percent: number) => void;
 }) {
   const card = personRateCard(unitId);
   if (!card || !current || !next) return null;
@@ -424,6 +466,13 @@ function WebCompareCard({
         {discountSentence(card)}
         {card.note ? ` ${card.note}` : ""}
       </p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#e4d8c4] bg-[#f3e6c8] px-4 py-2">
+        <p className="text-sm text-[#3f3424]">
+          <span className="font-medium">2027</span>
+          <span className="ml-2">vse cene od WEB</span>
+        </p>
+        <PercentLift label={`${card.name}, odstotek dviga 2027`} value={lift} onApply={onLift} />
+      </div>
       <div className="max-w-full overflow-hidden bg-card">
         <table className="w-full table-fixed border-collapse text-sm">
           <colgroup>
@@ -510,6 +559,70 @@ function WebCompareCard({
       </div>
     </article>
   );
+}
+
+function PercentLift({
+  value,
+  onApply,
+  label,
+}: {
+  value: number | null;
+  onApply: (percent: number) => void;
+  label: string;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const text = draft === null ? percentText(value) : draft;
+  const parsed = parsePercent(text);
+
+  function apply() {
+    if (parsed === null) return;
+    onApply(parsed);
+    setDraft(null);
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="relative">
+        <Input
+          aria-label={label}
+          size={3}
+          inputMode="decimal"
+          autoComplete="off"
+          value={text}
+          placeholder="0"
+          onFocus={() => setDraft(percentText(value))}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              apply();
+            }
+          }}
+          onChange={(event) => {
+            const raw = event.target.value.replace(/[^\d,.-]/g, "").slice(0, 5);
+            setDraft(raw);
+          }}
+          className="h-8 w-14 rounded-md border-transparent bg-white px-1.5 pr-5 text-right text-sm tabular-nums shadow-none"
+        />
+        <span className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-[11px] text-muted-foreground">
+          %
+        </span>
+      </div>
+      <Button
+        type="button"
+        size="sm"
+        disabled={parsed === null}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={apply}
+      >
+        Dvigni
+      </Button>
+    </div>
+  );
+}
+
+function percentText(value: number | null): string {
+  if (value === null) return "";
+  return new Intl.NumberFormat("sl-SI", { maximumFractionDigits: 1 }).format(value);
 }
 
 function PerPerson({ amount, guests }: { amount: number | null; guests: number }) {

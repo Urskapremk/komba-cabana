@@ -554,22 +554,47 @@ export function sanitizeWeb2027(input: unknown): PersonRates | null {
   return readPersonGrid(input, emptyPersonRates());
 }
 
+export function sanitizeWebLift(input: unknown): WebLift | null {
+  if (!input || typeof input !== "object") return null;
+  const source = input as Record<string, unknown>;
+  const next = emptyWebLift();
+  let recognized = false;
+  for (const card of PERSON_RATE_CARDS) {
+    if (!Object.hasOwn(source, card.id)) continue;
+    recognized = true;
+    const value = source[card.id];
+    if (value === null || typeof value !== "number" || !Number.isFinite(value)) continue;
+    const rounded = Math.round(value * 10) / 10;
+    if (rounded < -90 || rounded > 300) continue;
+    next[card.id] = rounded;
+  }
+  return recognized ? next : null;
+}
+
 export function readCenik(
   input: unknown,
-): { prices: Prices; offers: Offers; personRates: PersonRates; web2027: PersonRates } | null {
+): { prices: Prices; offers: Offers; personRates: PersonRates; web2027: PersonRates; webLift: WebLift } | null {
   if (!input || typeof input !== "object") return null;
-  const envelope = input as { prices?: unknown; offers?: unknown; personRates?: unknown; web2027?: unknown };
+  const envelope = input as {
+    prices?: unknown;
+    offers?: unknown;
+    personRates?: unknown;
+    web2027?: unknown;
+    webLift?: unknown;
+  };
   const pricesSource = "prices" in envelope ? envelope.prices : envelope;
   const prices = sanitizePrices(pricesSource);
   const offers = sanitizeOffers(envelope.offers);
   const personRates = sanitizePersonRates(envelope.personRates);
   const web2027 = sanitizeWeb2027(envelope.web2027);
-  if (!prices && !offers && !personRates && !web2027) return null;
+  const webLift = sanitizeWebLift(envelope.webLift);
+  if (!prices && !offers && !personRates && !web2027 && !webLift) return null;
   return {
     prices: prices ?? clonePrices(),
     offers: offers ?? emptyOffers(),
     personRates: personRates ?? defaultPersonRates(),
     web2027: web2027 ?? emptyPersonRates(),
+    webLift: webLift ?? emptyWebLift(),
   };
 }
 
@@ -610,6 +635,52 @@ export function formatDate(iso: string): string {
 export function pricePerPerson(amount: number | null, guests: number): number | null {
   if (amount == null || guests <= 0) return null;
   return Math.round(amount / guests);
+}
+
+export type WebLift = Record<string, number | null>;
+
+export function emptyWebLift(): WebLift {
+  return {
+    "ocean-1": null,
+    "ocean-2": null,
+    "garden-3": null,
+    "beach-4": null,
+  };
+}
+
+/** Odstotek dviga, ena decimalka, od −90 do 300. Vejica in pika sta enaki. */
+export function parsePercent(raw: string): number | null {
+  const text = raw.trim().replace(/\s/g, "").replace(",", ".");
+  if (!/^-?\d{1,3}(\.\d{1,2})?$/.test(text)) return null;
+  const value = Math.round(Number(text) * 10) / 10;
+  if (value < -90 || value > 300) return null;
+  return value;
+}
+
+export function liftAmount(amount: number | null, percent: number): number | null {
+  if (amount == null || !Number.isFinite(percent)) return null;
+  const next = Math.round(amount * (1 + percent / 100));
+  if (next < 0 || next >= 1_000_000) return null;
+  return next;
+}
+
+/** Vse cene enega bungalova, zaokrožene na evro. */
+export function liftPersonUnit(
+  unitId: string,
+  current: PersonRates[string],
+  percent: number,
+): PersonRates[string] | null {
+  const card = personRateCard(unitId);
+  if (!card || !Number.isFinite(percent)) return null;
+  const seasons = {} as PersonRates[string];
+  for (const season of PERSON_SEASONS) {
+    const row: Record<number, number | null> = {};
+    for (const count of personColumns(card.capacity)) {
+      row[count] = liftAmount(current[season.id]?.[count] ?? null, percent);
+    }
+    seasons[season.id] = row;
+  }
+  return seasons;
 }
 
 export function formatEuro(value: number | null): string {

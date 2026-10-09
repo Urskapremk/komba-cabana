@@ -22,6 +22,10 @@ import {
   guestCounts,
   personRateCard,
   pricePerPerson,
+  defaultPersonRates,
+  liftAmount,
+  liftPersonUnit,
+  parsePercent,
   readCenik,
   sanitizeOffers,
   sanitizePrices,
@@ -203,6 +207,7 @@ describe("shranjene cene", () => {
     assert.equal(cenik.offers["ocean-1"]["poletje-1"][4], null);
     assert.equal(cenik.personRates["ocean-1"].zima[4], 560);
     assert.equal(cenik.web2027["ocean-1"].zima[4], null);
+    assert.equal(cenik.webLift["ocean-1"], null);
   });
 
   it("leto 2027 za WEB ostane prazno, dokler cena ni vpisana", () => {
@@ -253,6 +258,28 @@ describe("cene po osebah", () => {
     assert.equal(beach?.discount, 90);
     assert.equal(JSON.stringify(PERSON_RATE_CARDS).includes("534"), false);
     assert.equal(JSON.stringify(PERSON_RATE_CARDS).includes("590"), false);
+  });
+
+  it("odstotek dvigne vse cene bungalova od WEB in zaokroži na evro", () => {
+    assert.equal(parsePercent("5"), 5);
+    assert.equal(parsePercent("7,5"), 7.5);
+    assert.equal(parsePercent("7.5"), 7.5);
+    assert.equal(parsePercent(""), null);
+    assert.equal(parsePercent("301"), null);
+    const current = defaultPersonRates()["ocean-1"];
+    const lifted = liftPersonUnit("ocean-1", current, 5);
+    assert.ok(lifted);
+    assert.equal(lifted.zima[4], 588);
+    assert.equal(lifted.zima[3], 515);
+    assert.equal(lifted.zima[2], 441);
+    assert.equal(lifted.zima[1], 441);
+    assert.equal(lifted["pomlad-jesen"][4], 704);
+    assert.equal(lifted["poletje-december"][4], 735);
+    assert.equal(liftAmount(null, 5), null);
+    const cenik = readCenik({ webLift: { "ocean-1": 7.5, "beach-4": 400, "ocean-2": null } });
+    assert.equal(cenik?.webLift["ocean-1"], 7.5);
+    assert.equal(cenik?.webLift["ocean-2"], null);
+    assert.equal(cenik?.webLift["beach-4"], null);
   });
 
   it("ceno bungalova deli na osebo", () => {
