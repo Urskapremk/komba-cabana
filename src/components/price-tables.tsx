@@ -364,7 +364,7 @@ export function PriceTables() {
                 <>
                   Polna zasedenost
                   <br />
-                  leto 2027
+                  odprto od marca
                 </>
               ) : (
                 <>

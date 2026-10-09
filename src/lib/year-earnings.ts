@@ -49,8 +49,16 @@ export type SeasonSlice = {
   missingNights: number;
 };
 
+/** Januar in februar sta zaprta zaradi obnove. Odpremo marca. */
+export const CLOSED_MONTHS = [1, 2] as const;
+
+export function monthIsClosed(month: number): boolean {
+  return (CLOSED_MONTHS as readonly number[]).includes(month);
+}
+
 export type MonthEarnings = {
   month: number;
+  closed: boolean;
   nights: number;
   slices: SeasonSlice[];
   units: Record<string, EarnLine>;
@@ -193,8 +201,8 @@ function lineForNights(
 
 /**
  * Zaslužek celega leta po mesecih pri polni zasedenosti.
- * Vsak bungalov je zaseden vsako noč po web ceni za polno število oseb.
- * Agencija in Early booking se odštejeta od polne cene.
+ * Vsak bungalov je zaseden vsako odprto noč po web ceni za polno število oseb.
+ * Januar in februar sta zaprta. Agencija in Early booking se odštejeta od polne cene.
  */
 export function yearEarnings(
   year: number,
@@ -204,6 +212,23 @@ export function yearEarnings(
 ): YearEarnings {
   const months: MonthEarnings[] = [];
   for (let month = 1; month <= 12; month += 1) {
+    if (monthIsClosed(month)) {
+      const units: Record<string, EarnLine> = {};
+      for (const card of PERSON_RATE_CARDS) units[card.id] = emptyLine();
+      months.push({
+        month,
+        closed: true,
+        nights: 0,
+        slices: [],
+        units,
+        gross: 0,
+        agency: 0,
+        early: 0,
+        left: 0,
+        missingNights: 0,
+      });
+      continue;
+    }
     const slices: SeasonSlice[] = monthSeasonSlices(year, month).map((slice) => {
       const units: Record<string, EarnLine> = {};
       let gross = 0;
@@ -243,7 +268,7 @@ export function yearEarnings(
         units[card.id] = addLine(units[card.id], slice.units[card.id]);
       }
     }
-    months.push({ month, nights, slices, units, gross, agency, early, left, missingNights });
+    months.push({ month, closed: false, nights, slices, units, gross, agency, early, left, missingNights });
   }
 
   const units: Record<string, EarnLine> = {};

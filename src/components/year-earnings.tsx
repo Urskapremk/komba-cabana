@@ -45,10 +45,11 @@ export function YearEarnings({
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-3">
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Polna zasedenost pomeni, da je vsak bungalov zaseden vsako noč leta {EARNINGS_YEAR}. Cena je
-          web cena za polno število oseb: 4 pri Bungalowu I in Beach Villi, 2 pri II in III. Ostane =
-          polna cena − agencija − early booking. Oba odbitka sta od polne cene, z odstotki iz cenika.
-          9.–13. 7. velja poletje. 1.–10. 1. in 19.–31. 12. sta praznična cena, 1.–18. 12. je zima.
+          Januar in februar sta zaprta zaradi obnove. Odpremo marca: od takrat je vsak bungalov zaseden
+          vsako noč leta {EARNINGS_YEAR}. Cena je web cena za polno število oseb: 4 pri Bungalowu I in
+          Beach Villi, 2 pri II in III. Ostane = polna cena − agencija − early booking. Oba odbitka sta
+          od polne cene, z odstotki iz cenika. 9.–13. 7. velja poletje. 19.–31. 12. je praznična cena,
+          1.–18. 12. je zima.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <SourceCard
@@ -139,6 +140,24 @@ export function YearEarnings({
             </thead>
             <tbody>
               {active.months.map((month) =>
+                month.closed ? (
+                  <tr key={month.month} className="bg-[#f3efe8] text-muted-foreground">
+                    <td className={cn(cell, "text-left")}>
+                      <span className="font-medium text-foreground">{MONTH_LABELS[month.month - 1]}</span>
+                      <span className="mt-0.5 block text-xs">zaprto, obnova</span>
+                    </td>
+                    <td className={cn(cell, "text-right tabular-nums")}>0</td>
+                    {PERSON_RATE_CARDS.map((card) => (
+                      <td key={card.id} className={cn(cell, "text-right")}>
+                        —
+                      </td>
+                    ))}
+                    <td className={cn(cell, "text-right")}>—</td>
+                    <td className={cn(cell, "text-right")}>—</td>
+                    <td className={cn(cell, "text-right")}>—</td>
+                    <td className={cn(cell, "text-right")}>—</td>
+                  </tr>
+                ) : (
                 month.slices.map((slice, index) => (
                   <tr key={`${month.month}-${slice.seasonId}`} className={sliceTone(slice.seasonId)}>
                     <td className={cn(cell, "text-left")}>
@@ -158,7 +177,8 @@ export function YearEarnings({
                     <td className={cn(cell, "text-right tabular-nums text-[#1e3a46]")}>{formatEuro(slice.early)}</td>
                     <td className={cn(cell, "bg-[#fbf6ec] text-right font-medium tabular-nums")}>{formatEuro(slice.left)}</td>
                   </tr>
-                )),
+                ))
+                ),
               )}
             </tbody>
             <tfoot>
