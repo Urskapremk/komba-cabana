@@ -634,6 +634,10 @@ export type SavedCenik = {
   earlyBooking: WebLift;
   /** Odstotek popusta, če sta v galeriji dva odrasla. Manjka pomeni, da popusta še ni. */
   galleryPair: WebLift;
+  /** Odstotek, ki ga pri variabilnih cenah vzame Optima Plus. Pri WEB ga ni. */
+  optima: WebLift;
+  /** Odstotek, ki ga pri variabilnih cenah vzame Booking. Pri WEB ga ni. */
+  booking: WebLift;
   /** Zelena kljukica pri ceni. False pomeni, da je bila odznačena. */
   checks: PriceChecks;
   lodgeOccupancy: number;
@@ -658,6 +662,8 @@ export function readCenik(input: unknown): SavedCenik | null {
     commission?: unknown;
     earlyBooking?: unknown;
     galleryPair?: unknown;
+    optima?: unknown;
+    booking?: unknown;
     checks?: unknown;
     lodgeOccupancy?: unknown;
     savedAt?: unknown;
@@ -671,9 +677,23 @@ export function readCenik(input: unknown): SavedCenik | null {
   const commission = sanitizeCommission(envelope.commission);
   const earlyBooking = sanitizeCommission(envelope.earlyBooking);
   const galleryPair = sanitizeGalleryPair(envelope.galleryPair);
+  const optima = sanitizeCommission(envelope.optima);
+  const booking = sanitizeCommission(envelope.booking);
   const checks = sanitizePriceChecks(envelope.checks);
   const hasCheck = Object.values(checks).some(Boolean);
-  if (!prices && !offers && !personRates && !web2027 && !webLift && !commission && !earlyBooking && !galleryPair && !hasCheck) {
+  if (
+    !prices &&
+    !offers &&
+    !personRates &&
+    !web2027 &&
+    !webLift &&
+    !commission &&
+    !earlyBooking &&
+    !galleryPair &&
+    !optima &&
+    !booking &&
+    !hasCheck
+  ) {
     return null;
   }
   const savedAt = sanitizeSavedAt(envelope.savedAt);
@@ -686,6 +706,8 @@ export function readCenik(input: unknown): SavedCenik | null {
     commission: commission ?? emptyWebLift(),
     earlyBooking: earlyBooking ?? emptyWebLift(),
     galleryPair: galleryPair ?? emptyWebLift(),
+    optima: optima ?? emptyWebLift(),
+    booking: booking ?? emptyWebLift(),
     checks,
     lodgeOccupancy: sanitizeLodgeOccupancy(envelope.lodgeOccupancy),
     ...(savedAt ? { savedAt } : {}),
@@ -729,6 +751,8 @@ export function cenikEntryScore(cenik: SavedCenik): number {
     if (amountOrNull(cenik.commission[card.id]) != null) score += 1;
     if (amountOrNull(cenik.earlyBooking[card.id]) != null) score += 1;
     if (amountOrNull(cenik.galleryPair?.[card.id]) != null) score += 1;
+    if (amountOrNull(cenik.optima?.[card.id]) != null) score += 1;
+    if (amountOrNull(cenik.booking?.[card.id]) != null) score += 1;
   }
   for (const marked of Object.values(cenik.checks ?? {})) {
     if (marked) score += 1;
@@ -782,6 +806,10 @@ export function cenikDropsEntries(existing: SavedCenik, incoming: SavedCenik): b
     if (dropsAmount(amountOrNull(existing.galleryPair?.[card.id]), amountOrNull(incoming.galleryPair?.[card.id]), null)) {
       return true;
     }
+    if (dropsAmount(amountOrNull(existing.optima?.[card.id]), amountOrNull(incoming.optima?.[card.id]), null)) return true;
+    if (dropsAmount(amountOrNull(existing.booking?.[card.id]), amountOrNull(incoming.booking?.[card.id]), null)) {
+      return true;
+    }
   }
   return dropsAmount(existing.lodgeOccupancy, incoming.lodgeOccupancy, 100);
 }
@@ -807,6 +835,8 @@ export function mergeCenik(primary: SavedCenik, fallback: SavedCenik): SavedCeni
   const priceDefaults = clonePrices();
   const next = structuredClone(primary);
   next.galleryPair = { ...emptyWebLift(), ...next.galleryPair };
+  next.optima = { ...emptyWebLift(), ...next.optima };
+  next.booking = { ...emptyWebLift(), ...next.booking };
   for (const bungalow of BUNGALOWS) {
     for (const period of PERIODS) {
       const base = priceDefaults[bungalow.id][period.id];
@@ -855,6 +885,16 @@ export function mergeCenik(primary: SavedCenik, fallback: SavedCenik): SavedCeni
       amountOrNull(fallback.galleryPair?.[card.id]),
       null,
     );
+    next.optima[card.id] = pickAmount(
+      amountOrNull(primary.optima?.[card.id]),
+      amountOrNull(fallback.optima?.[card.id]),
+      null,
+    );
+    next.booking[card.id] = pickAmount(
+      amountOrNull(primary.booking?.[card.id]),
+      amountOrNull(fallback.booking?.[card.id]),
+      null,
+    );
   }
   next.checks = { ...(fallback.checks ?? {}), ...(primary.checks ?? {}) };
   next.lodgeOccupancy = pickAmount(primary.lodgeOccupancy, fallback.lodgeOccupancy, 100) ?? 100;
@@ -892,6 +932,8 @@ export function preferCenik(local: SavedCenik | null, server: SavedCenik | null)
 export function rebaseCenik(base: SavedCenik, baseline: SavedCenik, edited: SavedCenik): SavedCenik {
   const next = structuredClone(base);
   next.galleryPair = { ...emptyWebLift(), ...next.galleryPair };
+  next.optima = { ...emptyWebLift(), ...next.optima };
+  next.booking = { ...emptyWebLift(), ...next.booking };
   next.checks = { ...(base.checks ?? {}) };
   const beachMirrorOnly =
     amountOrNull(baseline.webLift["beach-4"]) == null && amountOrNull(edited.webLift["beach-4"]) == null;
@@ -930,6 +972,12 @@ export function rebaseCenik(base: SavedCenik, baseline: SavedCenik, edited: Save
     }
     if (amountOrNull(baseline.galleryPair?.[card.id]) !== amountOrNull(edited.galleryPair?.[card.id])) {
       next.galleryPair[card.id] = amountOrNull(edited.galleryPair?.[card.id]);
+    }
+    if (amountOrNull(baseline.optima?.[card.id]) !== amountOrNull(edited.optima?.[card.id])) {
+      next.optima[card.id] = amountOrNull(edited.optima?.[card.id]);
+    }
+    if (amountOrNull(baseline.booking?.[card.id]) !== amountOrNull(edited.booking?.[card.id])) {
+      next.booking[card.id] = amountOrNull(edited.booking?.[card.id]);
     }
   }
   if (baseline.lodgeOccupancy !== edited.lodgeOccupancy) next.lodgeOccupancy = edited.lodgeOccupancy;
@@ -1168,6 +1216,23 @@ export function afterDiscounts(
   if (agency == null && early == null) return { agency: null, early: null, left: null };
   const left = Math.max(0, amount - (agency ?? 0) - (early ?? 0));
   return { agency, early, left };
+}
+
+/** Min ali max minus Optima Plus minus Booking. Oba odbitka sta od te cene. */
+export function afterChannels(
+  amount: number | null,
+  optima: number | null,
+  booking: number | null,
+): { optima: number | null; booking: number | null; left: number | null } | null {
+  if (amount == null) return null;
+  const optimaCut = discountShare(amount, optima);
+  const bookingCut = discountShare(amount, booking);
+  if (optimaCut == null && bookingCut == null) return null;
+  return {
+    optima: optimaCut,
+    booking: bookingCut,
+    left: Math.max(0, amount - (optimaCut ?? 0) - (bookingCut ?? 0)),
+  };
 }
 
 export function liftAmount(amount: number | null, percent: number): number | null {

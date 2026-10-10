@@ -61,6 +61,7 @@ import {
   pricePerPerson,
   priceDelta,
   liftPersonUnit,
+  afterChannels,
   afterDiscounts,
   cenikHasEntries,
   parseCommission,
@@ -130,6 +131,8 @@ function mirrorBeach(cenik: Cenik): Cenik {
     commission: cenik.commission ?? emptyWebLift(),
     earlyBooking: cenik.earlyBooking ?? emptyWebLift(),
     galleryPair: cenik.galleryPair ?? emptyWebLift(),
+    optima: cenik.optima ?? emptyWebLift(),
+    booking: cenik.booking ?? emptyWebLift(),
     checks: cenik.checks ?? {},
     web2027: {
       ...cenik.web2027,
@@ -150,6 +153,8 @@ function blankCenik(): Cenik {
     commission: emptyWebLift(),
     earlyBooking: emptyWebLift(),
     galleryPair: emptyWebLift(),
+    optima: emptyWebLift(),
+    booking: emptyWebLift(),
     checks: {},
     lodgeOccupancy: 100,
   };
@@ -285,6 +290,8 @@ function bungalowSlice(source: Cenik, unitId: string) {
     commission: source.commission?.[unitId] ?? null,
     earlyBooking: source.earlyBooking?.[unitId] ?? null,
     galleryPair: source.galleryPair?.[unitId] ?? null,
+    optima: source.optima?.[unitId] ?? null,
+    booking: source.booking?.[unitId] ?? null,
     checks: checksForUnit(source.checks, unitId),
   });
 }
@@ -310,6 +317,8 @@ function savedEnvelope(next: Cenik) {
     commission: synced.commission ?? emptyWebLift(),
     earlyBooking: synced.earlyBooking ?? emptyWebLift(),
     galleryPair: synced.galleryPair ?? emptyWebLift(),
+    optima: synced.optima ?? emptyWebLift(),
+    booking: synced.booking ?? emptyWebLift(),
     checks: synced.checks ?? {},
     lodgeOccupancy: synced.lodgeOccupancy,
     ...(synced.savedAt ? { savedAt: synced.savedAt } : {}),
@@ -346,6 +355,8 @@ export function PriceTables() {
   const commission = cenik.commission ?? emptyWebLift();
   const earlyBooking = cenik.earlyBooking ?? emptyWebLift();
   const galleryPair = cenik.galleryPair ?? emptyWebLift();
+  const optima = cenik.optima ?? emptyWebLift();
+  const booking = cenik.booking ?? emptyWebLift();
   const prices = cenik.prices;
   const edited = useRef(false);
   const ready = useRef(false);
@@ -610,6 +621,22 @@ export function PriceTables() {
     });
   }
 
+  function setOptima(unitId: string, percent: number) {
+    const current = cenikRef.current;
+    commit({
+      ...current,
+      optima: { ...(current.optima ?? emptyWebLift()), [unitId]: percent },
+    });
+  }
+
+  function setBooking(unitId: string, percent: number) {
+    const current = cenikRef.current;
+    commit({
+      ...current,
+      booking: { ...(current.booking ?? emptyWebLift()), [unitId]: percent },
+    });
+  }
+
   function setGalleryPair(unitId: string, percent: number) {
     const current = cenikRef.current;
     commit({
@@ -760,6 +787,7 @@ export function PriceTables() {
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Trenutna cena in leto 2027 sta v isti vrstici. Pod ceno bungalova je preračun na osebo, cena za odraslo osebo.
             Minimalna cena 2027 je {PERSON_FLOOR_2027} € na osebo. Provizijo agencije vpišeš pri fiksnih cenah WEB. Early booking vpišeš v odstotkih. Pod ceno na osebo piše, koliko ostane.
+            Pri variabilnih cenah vpišeš odstotek Optima Plus in odstotek Booking. Oba se odštejeta od min in od max.
             Pri 2027 vpišeš odstotek in dvigneš cene tega bungalova od trenutnega WEB, tudi pri
             Beach Villi. Pri Bungalow I - Family sta v tabeli ceni za 2 osebi in 1 osebo, zraven pa otroka v galeriji.
               Ena odrasla oseba v galeriji plača polovico cene za 2 osebi. Če sta v galeriji dva odrasla, vpišeš odstotek popusta od cene za 2 osebi. V letu 2027 se vpisujeta samo ti dve ceni.
@@ -855,6 +883,10 @@ export function PriceTables() {
                     summary={shiftSentence(card.id, prices)}
                     capacity={card.capacity}
                     earlyBooking={earlyBooking[card.id] ?? null}
+                    optima={optima[card.id] ?? null}
+                    booking={booking[card.id] ?? null}
+                    onOptima={(percent) => setOptima(card.id, percent)}
+                    onBooking={(percent) => setBooking(card.id, percent)}
                     onChange={(periodId, next) => setPrice(card.id, periodId, next)}
                     onReset={() => resetUnit(card.id)}
                     checks={cenik.checks ?? {}}
@@ -867,6 +899,10 @@ export function PriceTables() {
                     prices={prices["beach-4"]}
                     capacity={card.capacity}
                     earlyBooking={earlyBooking[card.id] ?? null}
+                    optima={optima[card.id] ?? null}
+                    booking={booking[card.id] ?? null}
+                    onOptima={(percent) => setOptima(card.id, percent)}
+                    onBooking={(percent) => setBooking(card.id, percent)}
                     onChange={(periodId, next) => setPrice("beach-4", periodId, next)}
                     onReset={() => resetUnit("beach-4")}
                     checks={cenik.checks ?? {}}
@@ -1577,6 +1613,75 @@ function DiscountLines({
   );
 }
 
+function ChannelLines({
+  amount,
+  optima,
+  booking,
+}: {
+  amount: number | null;
+  optima: number | null;
+  booking: number | null;
+}) {
+  const cut = afterChannels(amount, optima, booking);
+  if (!cut || cut.left == null) return null;
+  return (
+    <span className="mt-1 block border-t border-[#e4d8c4] pt-1 text-right text-[11px] leading-tight">
+      {cut.optima != null ? (
+        <span className="block font-medium text-[#8a4b12]">− Optima Plus {formatEuro(cut.optima)}</span>
+      ) : null}
+      {cut.booking != null ? (
+        <span className="block font-medium text-[#1d3f73]">− Booking {formatEuro(cut.booking)}</span>
+      ) : null}
+      <span className="block font-medium text-[#1c1915]">ostane {formatEuro(cut.left)}</span>
+    </span>
+  );
+}
+
+function VariableChannels({
+  name,
+  optima,
+  booking,
+  onOptima,
+  onBooking,
+}: {
+  name: string;
+  optima: number | null;
+  booking: number | null;
+  onOptima: (percent: number) => void;
+  onBooking: (percent: number) => void;
+}) {
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#e7d3b0] bg-[#f8e8c8] px-4 py-2">
+        <p className="text-sm text-[#6a3e12]">
+          <span className="font-medium">Optima Plus</span>
+          <span className="ml-2">odstotek od min in od max</span>
+        </p>
+        <PercentLift
+          label={`${name}, Optima Plus`}
+          value={optima}
+          onApply={onOptima}
+          action="Izračunaj"
+          parse={parseCommission}
+        />
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#c9d7ea] bg-[#e7eef8] px-4 py-2">
+        <p className="text-sm text-[#1d3f73]">
+          <span className="font-medium">Booking</span>
+          <span className="ml-2">odstotek od min in od max</span>
+        </p>
+        <PercentLift
+          label={`${name}, Booking`}
+          value={booking}
+          onApply={onBooking}
+          action="Izračunaj"
+          parse={parseCommission}
+        />
+      </div>
+    </>
+  );
+}
+
 function PersonNet({
   amount,
   guests,
@@ -1687,6 +1792,10 @@ function CompareCard({
   summary,
   capacity,
   earlyBooking,
+  optima,
+  booking,
+  onOptima,
+  onBooking,
   onChange,
   onReset,
   checks,
@@ -1701,6 +1810,10 @@ function CompareCard({
   summary: string;
   capacity: number;
   earlyBooking: number | null;
+  optima: number | null;
+  booking: number | null;
+  onOptima: (percent: number) => void;
+  onBooking: (percent: number) => void;
   onChange: (periodId: string, next: Money) => void;
   onReset: () => void;
   checks: PriceChecks;
@@ -1735,6 +1848,9 @@ function CompareCard({
         </Button>
       </div>
       {open ? <p className="bg-[#f8f1e4] px-4 py-2.5 text-sm leading-relaxed text-[#3f3424]">{summary}</p> : null}
+      {open ? (
+        <VariableChannels name={name} optima={optima} booking={booking} onOptima={onOptima} onBooking={onBooking} />
+      ) : null}
 
       {open ? <div className="max-w-full overflow-x-auto bg-card">
         <table className="w-full table-fixed border-collapse text-sm">
@@ -1803,10 +1919,12 @@ function CompareCard({
                   <td className={cn(bodyCell, "text-right")}>
                     <span className="tabular-nums whitespace-nowrap">{formatEuro(base.min)}</span>
                     <PersonNet amount={base.min} guests={capacity} earlyBooking={earlyBooking} />
+                    <ChannelLines amount={base.min} optima={optima} booking={booking} />
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <span className="tabular-nums whitespace-nowrap">{formatEuro(base.max)}</span>
                     <PersonNet amount={base.max} guests={capacity} earlyBooking={earlyBooking} />
+                    <ChannelLines amount={base.max} optima={optima} booking={booking} />
                   </td>
                   <td className={numCell}>{formatEuro(baseBand)}</td>
                   <td className={cn(bodyCell, "text-right")}>
@@ -1823,6 +1941,7 @@ function CompareCard({
                       </span>
                     ) : null}
                     <PersonNet amount={next.min} guests={capacity} earlyBooking={earlyBooking} />
+                    <ChannelLines amount={next.min} optima={optima} booking={booking} />
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <EuroInput
@@ -1833,6 +1952,7 @@ function CompareCard({
                       onChange={(max) => onChange(period.id, { ...next, max })}
                     />
                     <PersonNet amount={next.max} guests={capacity} earlyBooking={earlyBooking} />
+                    <ChannelLines amount={next.max} optima={optima} booking={booking} />
                   </td>
                   <td className={numCell}>{formatEuro(nextBand)}</td>
                   <td className={numCell}>
@@ -1884,6 +2004,10 @@ function BeachCard({
   prices,
   capacity,
   earlyBooking,
+  optima,
+  booking,
+  onOptima,
+  onBooking,
   onChange,
   onReset,
   checks,
@@ -1894,6 +2018,10 @@ function BeachCard({
   prices: Record<string, Money>;
   capacity: number;
   earlyBooking: number | null;
+  optima: number | null;
+  booking: number | null;
+  onOptima: (percent: number) => void;
+  onBooking: (percent: number) => void;
   onChange: (periodId: string, next: Money) => void;
   onReset: () => void;
   checks: PriceChecks;
@@ -1924,6 +2052,15 @@ function BeachCard({
           Počisti
         </Button>
       </div>
+      {open ? (
+        <VariableChannels
+          name="Beach Villa IV"
+          optima={optima}
+          booking={booking}
+          onOptima={onOptima}
+          onBooking={onBooking}
+        />
+      ) : null}
       {open ? <div className="max-w-full overflow-x-auto bg-card">
         <table className="w-full table-fixed border-collapse text-sm">
           <colgroup>
@@ -1965,6 +2102,7 @@ function BeachCard({
                       onChange={(min) => onChange(period.id, { ...price, min })}
                     />
                     <PersonNet amount={price.min} guests={capacity} earlyBooking={earlyBooking} />
+                    <ChannelLines amount={price.min} optima={optima} booking={booking} />
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <EuroInput
@@ -1976,6 +2114,7 @@ function BeachCard({
                       onChange={(max) => onChange(period.id, { ...price, max })}
                     />
                     <PersonNet amount={price.max} guests={capacity} earlyBooking={earlyBooking} />
+                    <ChannelLines amount={price.max} optima={optima} booking={booking} />
                   </td>
                   <td className={numCell}>
                     {gap ? (

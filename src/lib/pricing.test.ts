@@ -45,6 +45,7 @@ import {
   emptyPersonRates,
   liftAmount,
   liftPersonUnit,
+  afterChannels,
   afterDiscounts,
   netAfterCommission,
   parseCommission,
@@ -379,6 +380,24 @@ describe("cene po osebah", () => {
     assert.equal(stored?.earlyBooking["ocean-2"], 10);
     assert.equal(stored?.earlyBooking["garden-3"], null);
     assert.equal(stored?.earlyBooking["ocean-1"], null);
+  });
+
+  it("Optima Plus in Booking se odštejeta od min in od max", () => {
+    assert.deepEqual(afterChannels(400, 10, 15), { optima: 40, booking: 60, left: 300 });
+    assert.deepEqual(afterChannels(400, 10, null), { optima: 40, booking: null, left: 360 });
+    assert.deepEqual(afterChannels(400, null, 15), { optima: null, booking: 60, left: 340 });
+    assert.equal(afterChannels(400, null, null), null);
+    assert.equal(afterChannels(null, 10, 15), null);
+    const cenik = readCenik({ optima: { "ocean-1": 12.5, "beach-4": 120 }, booking: { "garden-3": 18 } });
+    assert.equal(cenik?.optima["ocean-1"], 12.5);
+    assert.equal(cenik?.optima["beach-4"], null);
+    assert.equal(cenik?.optima["ocean-2"], null);
+    assert.equal(cenik?.booking["garden-3"], 18);
+    assert.equal(cenik?.booking["ocean-1"], null);
+    const older = readCenik({ optima: { "ocean-1": 12.5 }, savedAt: 3 });
+    const newer = readCenik({ booking: { "ocean-1": 18 }, savedAt: 4 });
+    assert.equal(preferCenik(newer, older)?.optima["ocean-1"], 12.5);
+    assert.equal(preferCenik(newer, older)?.booking["ocean-1"], 18);
   });
 
   it("minimalna cena 2027 je 120 € na osebo", () => {
