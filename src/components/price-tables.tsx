@@ -616,11 +616,18 @@ export function PriceTables() {
   );
   const [tab, setTab] = useState<"cenik" | "zasluzek" | "zasedenost">("cenik");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [variableCollapsed, setVariableCollapsed] = useState<Record<string, boolean>>({});
   function unitOpen(id: string) {
     return collapsed[id] !== true;
   }
   function toggleUnit(id: string) {
     setCollapsed((current) => ({ ...current, [id]: current[id] !== true }));
+  }
+  function variableOpen(id: string) {
+    return variableCollapsed[id] !== true;
+  }
+  function toggleVariable(id: string) {
+    setVariableCollapsed((current) => ({ ...current, [id]: current[id] !== true }));
   }
   useEffect(() => {
     const read = () => {
@@ -764,7 +771,23 @@ export function PriceTables() {
                 index > 0 && "border-t border-border/80 pt-10",
               )}
             >
-              <h2 className="font-heading text-3xl tracking-tight">{card.name}</h2>
+              <h2>
+                <button
+                  type="button"
+                  className="flex w-full cursor-pointer items-center gap-3 text-left"
+                  aria-expanded={unitOpen(card.id)}
+                  onClick={() => toggleUnit(card.id)}
+                >
+                  <ChevronDownIcon
+                    className={cn("size-6 shrink-0 transition-transform", !unitOpen(card.id) && "-rotate-90")}
+                    aria-hidden="true"
+                  />
+                  <span className="font-heading text-3xl tracking-tight">{card.name}</span>
+                  <span className="ml-auto text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                    {unitOpen(card.id) ? "Skrij" : "Razširi"}
+                  </span>
+                </button>
+              </h2>
               <div className="flex flex-col gap-2">
                 <h3 className="text-xs font-medium tracking-[0.16em] text-primary uppercase">Fiksne cene WEB</h3>
                 <WebCompareCard
@@ -817,6 +840,8 @@ export function PriceTables() {
                     onReset={() => resetUnit(card.id)}
                     checks={cenik.checks ?? {}}
                     onToggleCheck={toggleCheck}
+                    open={variableOpen(card.id)}
+                    onToggle={() => toggleVariable(card.id)}
                   />
                 ) : (
                   <BeachCard
@@ -828,6 +853,8 @@ export function PriceTables() {
                     onReset={() => resetUnit("beach-4")}
                     checks={cenik.checks ?? {}}
                     onToggleCheck={toggleCheck}
+                    open={variableOpen(card.id)}
+                    onToggle={() => toggleVariable(card.id)}
                   />
                 )}
               </div>
@@ -1521,6 +1548,8 @@ function CompareCard({
   onReset,
   checks,
   onToggleCheck,
+  open,
+  onToggle,
 }: {
   unitId: string;
   name: string;
@@ -1534,23 +1563,38 @@ function CompareCard({
   onReset: () => void;
   checks: PriceChecks;
   onToggleCheck: (key: string) => void;
+  open: boolean;
+  onToggle: () => void;
 }) {
   const changed = PERIODS.some((period) => !sameMoney(prices[period.id], OPTIMA_PRICES[unitId][period.id]));
 
   return (
     <article className="w-full min-w-0 overflow-hidden rounded-2xl ring-1 ring-foreground/10">
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1c1915] px-4 py-3 text-[#f6f1e7]">
-        <div>
-          <h3 className="font-heading text-lg tracking-tight">{name}</h3>
-          <p className="text-xs text-white/70">{detail}</p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1c1915] pr-4 text-[#f6f1e7]">
+        <h3 className="min-w-0 flex-1">
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left hover:bg-white/10"
+            aria-expanded={open}
+            onClick={onToggle}
+          >
+            <ChevronDownIcon className={cn("size-5 shrink-0 transition-transform", !open && "-rotate-90")} aria-hidden="true" />
+            <span className="min-w-0">
+              <span className="font-heading block text-lg tracking-tight">{name}</span>
+              <span className="block text-xs text-white/70">{detail}</span>
+            </span>
+            <span className="ml-auto shrink-0 text-xs font-medium tracking-[0.14em] uppercase">
+              {open ? "Skrij" : "Razširi"}
+            </span>
+          </button>
+        </h3>
         <Button size="sm" variant="secondary" disabled={!changed} onClick={onReset}>
           Ponastavi
         </Button>
       </div>
-      <p className="bg-[#f8f1e4] px-4 py-2.5 text-sm leading-relaxed text-[#3f3424]">{summary}</p>
+      {open ? <p className="bg-[#f8f1e4] px-4 py-2.5 text-sm leading-relaxed text-[#3f3424]">{summary}</p> : null}
 
-      <div className="max-w-full overflow-x-auto bg-card">
+      {open ? <div className="max-w-full overflow-x-auto bg-card">
         <table className="w-full table-fixed border-collapse text-sm">
           <colgroup>
             <col className="w-[15%]" />
@@ -1663,7 +1707,7 @@ function CompareCard({
             })}
           </tbody>
         </table>
-      </div>
+      </div> : null}
     </article>
   );
 }
@@ -1703,6 +1747,8 @@ function BeachCard({
   onReset,
   checks,
   onToggleCheck,
+  open,
+  onToggle,
 }: {
   prices: Record<string, Money>;
   capacity: number;
@@ -1712,18 +1758,33 @@ function BeachCard({
   onReset: () => void;
   checks: PriceChecks;
   onToggleCheck: (key: string) => void;
+  open: boolean;
+  onToggle: () => void;
 }) {
   const changed = PERIODS.some((period) => !sameMoney(prices[period.id], OPTIMA_PRICES["beach-4"][period.id]));
 
   return (
     <article id="beach-villa" className="w-full min-w-0 scroll-mt-6 overflow-hidden rounded-2xl ring-1 ring-foreground/10">
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1c1915] px-4 py-3 text-[#f6f1e7]">
-        <h3 className="font-heading text-lg tracking-tight">Beach Villa IV</h3>
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1c1915] pr-4 text-[#f6f1e7]">
+        <h3 className="min-w-0 flex-1">
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left hover:bg-white/10"
+            aria-expanded={open}
+            onClick={onToggle}
+          >
+            <ChevronDownIcon className={cn("size-5 shrink-0 transition-transform", !open && "-rotate-90")} aria-hidden="true" />
+            <span className="font-heading text-lg tracking-tight">Beach Villa IV</span>
+            <span className="ml-auto shrink-0 text-xs font-medium tracking-[0.14em] uppercase">
+              {open ? "Skrij" : "Razširi"}
+            </span>
+          </button>
+        </h3>
         <Button size="sm" variant="secondary" disabled={!changed} onClick={onReset}>
           Počisti
         </Button>
       </div>
-      <div className="max-w-full overflow-x-auto bg-card">
+      {open ? <div className="max-w-full overflow-x-auto bg-card">
         <table className="w-full table-fixed border-collapse text-sm">
           <colgroup>
             <col className="w-[16%]" />
@@ -1791,7 +1852,7 @@ function BeachCard({
             })}
           </tbody>
         </table>
-      </div>
+      </div> : null}
     </article>
   );
 }
