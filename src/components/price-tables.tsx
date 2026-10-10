@@ -1631,16 +1631,16 @@ function ChannelLines({
   amount,
   optima,
   booking,
-  splitTwo,
+  guests,
 }: {
   amount: number | null;
   optima: number | null;
   booking: number | null;
-  splitTwo?: boolean;
+  guests: number;
 }) {
   const cut = afterChannels(amount, optima, booking);
   if (!cut || cut.left == null) return null;
-  const each = splitTwo ? pricePerPerson(cut.left, 2) : null;
+  const each = pricePerPerson(cut.left, guests);
   return (
     <span className="mt-1 block border-t border-[#e4d8c4] pt-1 text-right text-[11px] leading-tight">
       {cut.optima != null ? (
@@ -1941,12 +1941,12 @@ function CompareCard({
                   <td className={cn(bodyCell, "text-right")}>
                     <span className="tabular-nums whitespace-nowrap">{formatEuro(base.min)}</span>
                     <PersonNet amount={base.min} guests={capacity} earlyBooking={earlyBooking} />
-                    <ChannelLines amount={base.min} optima={optima} booking={booking} splitTwo={unitId === "ocean-2"} />
+                    <ChannelLines amount={base.min} optima={optima} booking={booking} guests={capacity} />
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <span className="tabular-nums whitespace-nowrap">{formatEuro(base.max)}</span>
                     <PersonNet amount={base.max} guests={capacity} earlyBooking={earlyBooking} />
-                    <ChannelLines amount={base.max} optima={optima} booking={booking} splitTwo={unitId === "ocean-2"} />
+                    <ChannelLines amount={base.max} optima={optima} booking={booking} guests={capacity} />
                   </td>
                   <td className={numCell}>{formatEuro(baseBand)}</td>
                   <td className={cn(bodyCell, "text-right")}>
@@ -1963,7 +1963,7 @@ function CompareCard({
                       </span>
                     ) : null}
                     <PersonNet amount={next.min} guests={capacity} earlyBooking={earlyBooking} />
-                    <ChannelLines amount={next.min} optima={optima} booking={booking} splitTwo={unitId === "ocean-2"} />
+                    <ChannelLines amount={next.min} optima={optima} booking={booking} guests={capacity} />
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <EuroInput
@@ -1974,7 +1974,7 @@ function CompareCard({
                       onChange={(max) => onChange(period.id, { ...next, max })}
                     />
                     <PersonNet amount={next.max} guests={capacity} earlyBooking={earlyBooking} />
-                    <ChannelLines amount={next.max} optima={optima} booking={booking} splitTwo={unitId === "ocean-2"} />
+                    <ChannelLines amount={next.max} optima={optima} booking={booking} guests={capacity} />
                   </td>
                   <td className={numCell}>{formatEuro(nextBand)}</td>
                   <td className={numCell}>
@@ -2124,7 +2124,7 @@ function BeachCard({
                       onChange={(min) => onChange(period.id, { ...price, min })}
                     />
                     <PersonNet amount={price.min} guests={capacity} earlyBooking={earlyBooking} />
-                    <ChannelLines amount={price.min} optima={optima} booking={booking} />
+                    <ChannelLines amount={price.min} optima={optima} booking={booking} guests={capacity} />
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <EuroInput
@@ -2136,7 +2136,7 @@ function BeachCard({
                       onChange={(max) => onChange(period.id, { ...price, max })}
                     />
                     <PersonNet amount={price.max} guests={capacity} earlyBooking={earlyBooking} />
-                    <ChannelLines amount={price.max} optima={optima} booking={booking} />
+                    <ChannelLines amount={price.max} optima={optima} booking={booking} guests={capacity} />
                   </td>
                   <td className={numCell}>
                     {gap ? (
