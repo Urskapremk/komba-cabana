@@ -26,6 +26,7 @@ import {
   childPrices,
   extraBedLabel,
   extraBedSentence,
+  singleExtraBedSentence,
   familyChildLabel,
   web2027Columns,
   familyGalleryTwoPerson,
@@ -399,6 +400,10 @@ describe("cene po osebah", () => {
     assert.equal(extraBedLabel(3), "3. oseba, dodatno ležišče");
     assert.equal(extraBedLabel(4), "4. oseba, dodatno ležišče");
     assert.equal(extraBedSentence().includes("dva odrasla"), true);
+    assert.equal(singleExtraBedSentence().includes("Eno dodatno ležišče"), true);
+    assert.equal(galleryAdultPrice(330), 165);
+    assert.equal(childPrices(galleryAdultPrice(330)!)[1].amount, 83);
+    assert.equal(childPrices(galleryAdultPrice(330)!)[2].amount, 132);
     assert.equal(galleryAdultPrice(380), 190);
     assert.equal(familyGalleryTwoPerson(420, null, false), 420);
     assert.equal(familyGalleryTwoPerson(420, 350, false), 420);

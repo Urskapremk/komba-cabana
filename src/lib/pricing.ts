@@ -1051,6 +1051,10 @@ export function extraBedSentence(): string {
   return "Cena je za 2 gosta ali za 1 osebo. Dve dodatni ležišči sta za otroka ali odraslo osebo. Ena odrasla oseba na dodatnem ležišču plača polovico cene za 2 osebi. Če sta v bungalovu še dva odrasla, vpišeš odstotek popusta od cene za 2 osebi. Otrok: 0–5 let bivanje brezplačno, 5–10 let −50 %, 10–15 let −20 % od cene ene odrasle osebe.";
 }
 
+export function singleExtraBedSentence(): string {
+  return "Eno dodatno ležišče je za otroka ali odraslo osebo. Ena odrasla oseba na dodatnem ležišču plača polovico cene za 2 osebi. Otrok: 0–5 let bivanje brezplačno, 5–10 let −50 %, 10–15 let −20 % od cene ene odrasle osebe.";
+}
+
 export function familyGallerySentence(): string {
   return "V galeriji spijo otroci. Ena odrasla oseba v galeriji plača polovico cene za 2 osebi. Če sta v galeriji dva odrasla, vpišeš odstotek popusta od cene za 2 osebi. Otrok: 0–5 let bivanje brezplačno, 5–10 let −50 %, 10–15 let −20 % od cene ene odrasle osebe.";
 }

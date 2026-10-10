@@ -28,6 +28,7 @@ import {
   childStaySentence,
   extraBedLabel,
   extraBedSentence,
+  singleExtraBedSentence,
   familyChildLabel,
   familyGallerySentence,
   priceCheckKey,
@@ -749,6 +750,7 @@ export function PriceTables() {
             Beach Villi. Pri Bungalow I - Family sta v tabeli ceni za 2 osebi in 1 osebo, zraven pa otroka v galeriji.
               Ena odrasla oseba v galeriji plača polovico cene za 2 osebi. Če sta v galeriji dva odrasla, vpišeš odstotek popusta od cene za 2 osebi. V letu 2027 se vpisujeta samo ti dve ceni.
             Beach Villa IV ima ceno za 2 gosta in za 1 osebo ter dve dodatni ležišči. Na ležišču je lahko otrok ali odrasla oseba. Če sta v bungalovu še dva odrasla, vpišeš odstotek popusta.
+            Bungalov III ima eno dodatno ležišče. Odrasla oseba ali otrok se računata enako kot v galeriji pri Bungalowu I.
             Pri ceni je kljukica: označi jo, ko je cena pripravljena. Zelena pomeni pravilno.
             Dokler dviga ni, ima Beach Villa za 2 in 1 osebo ceno 2027 kot Bungalow I - Family. Dodatni ležišči se računata iz cene za 2 osebi.
             Prazniki
@@ -925,12 +927,14 @@ function WebCompareCard({
   const linkedToFamily = unitId === "beach-4";
   const family = unitId === "ocean-1";
   const extraBeds = unitId === "beach-4";
+  const oneExtraBed = unitId === "garden-3";
   const priceGuests = family || extraBeds ? [2, 1] : personColumns(card.capacity);
-  const childGuests = family || extraBeds ? [3, 4] : [];
+  const childGuests = family || extraBeds ? [3, 4] : oneExtraBed ? [3] : [];
   const nextPriceGuests = web2027Columns(unitId);
-  const nextChildGuests = family || extraBeds ? [3, 4] : [];
-  const bedLabel = extraBeds ? extraBedLabel : familyChildLabel;
-  const adultPlace = extraBeds ? "na dodatnem ležišču" : "v galeriji";
+  const nextChildGuests = family || extraBeds ? [3, 4] : oneExtraBed ? [3] : [];
+  const bedLabel = extraBeds || oneExtraBed ? extraBedLabel : familyChildLabel;
+  const adultPlace = extraBeds || oneExtraBed ? "na dodatnem ležišču" : "v galeriji";
+  const pairForBeds = family || extraBeds ? galleryPair : null;
   const currentChanged = PERSON_SEASONS.some((season) =>
     personColumns(card.capacity).some((count) => current[season.id]?.[count] !== card.seasons[season.id][count]),
   );
@@ -980,7 +984,8 @@ function WebCompareCard({
       <div id={`${unitId}-fiksne`}>
       <p className="bg-[#f8f1e4] px-4 py-2.5 text-sm leading-relaxed text-[#3f3424]">
         {extraBeds ? extraBedSentence() : discountSentence(card)}
-        {family ? ` ${familyGallerySentence()}` : extraBeds || card.capacity < 3 ? "" : ` ${childStaySentence()}`}
+        {oneExtraBed ? ` ${singleExtraBedSentence()}` : ""}
+        {family ? ` ${familyGallerySentence()}` : extraBeds || oneExtraBed || card.capacity < 3 ? "" : ` ${childStaySentence()}`}
         {card.note ? ` ${card.note}` : ""}
       </p>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#e6d5e0] bg-[#f6eef4] px-4 py-2">
@@ -1039,13 +1044,15 @@ function WebCompareCard({
                 ? "ceni za 2 in 1 osebo od WEB, dodatni ležišči iz cene za 2 osebi"
                 : unitId === "ocean-1"
                   ? "ceni za 2 in 1 osebo od WEB, otroka v galeriji iz cene za 2 osebi"
-                  : "vse cene od WEB"}
+                  : oneExtraBed
+                    ? "ceni za 2 in 1 osebo od WEB, dodatno ležišče iz cene za 2 osebi"
+                    : "vse cene od WEB"}
           </span>
         </p>
         <PercentLift label={`${card.name}, odstotek dviga 2027`} value={lift} onApply={onLift} />
       </div>
       <div className="max-w-full overflow-x-auto bg-card">
-        <table className={cn("w-full table-fixed border-collapse text-sm", (family || extraBeds) && "min-w-[1200px]")}>
+        <table className={cn("w-full table-fixed border-collapse text-sm", (family || extraBeds || oneExtraBed) && "min-w-[1200px]")}>
           <colgroup>
             <col className="w-[18%]" />
             {priceGuests.map((count) => (
@@ -1075,7 +1082,7 @@ function WebCompareCard({
               >
                 2027
                 <span className="mt-0.5 block text-[10px] font-normal tracking-normal normal-case">
-                  {family ? "2 in 1 oseba, otroka izračunana · " : extraBeds ? "2 in 1 oseba, dodatni ležišči izračunani · " : ""}
+                  {family ? "2 in 1 oseba, otroka izračunana · " : extraBeds ? "2 in 1 oseba, dodatni ležišči izračunani · " : oneExtraBed ? "2 in 1 oseba, dodatno ležišče izračunano · " : ""}
                   min. {PERSON_FLOOR_2027} € na osebo
                 </span>
               </th>
@@ -1138,10 +1145,10 @@ function WebCompareCard({
                         />
                       ) : null}
                       <PerPerson amount={amount} guests={count} commission={commission} earlyBooking={earlyBooking} />
-                      {(family || extraBeds) && count === 2 ? (
+                      {(family || extraBeds || oneExtraBed) && count === 2 ? (
                         <>
-                          <GalleryStay twoPerson={amount} place={adultPlace} pairPercent={galleryPair} />
-                          <GalleryPairLine setPrice={amount} percent={galleryPair} />
+                          <GalleryStay twoPerson={amount} place={adultPlace} pairPercent={pairForBeds} />
+                          {family || extraBeds ? <GalleryPairLine setPrice={amount} percent={galleryPair} /> : null}
                         </>
                       ) : null}
                     </td>
@@ -1149,7 +1156,7 @@ function WebCompareCard({
                 })}
                 {childGuests.map((count) => (
                   <td key={`web-child-${count}`} className={cn(bodyCell, "align-top text-right")}>
-                    <GalleryStay twoPerson={currentTwo} place={adultPlace} pairPercent={galleryPair} />
+                    <GalleryStay twoPerson={currentTwo} place={adultPlace} pairPercent={pairForBeds} />
                   </td>
                 ))}
                 {nextPriceGuests.map((count) => {
@@ -1179,14 +1186,16 @@ function WebCompareCard({
                           <Delta base={current[season.id]?.[count] ?? null} next={amount} />
                         </span>
                       ) : null}
-                      {(family || extraBeds) && count === 2 ? (
+                      {(family || extraBeds || oneExtraBed) && count === 2 ? (
                         <>
-                          <GalleryStay twoPerson={yearGallery} place={adultPlace} pairPercent={galleryPair} fromCurrent={nextTwo == null && currentTwo != null} />
-                          <GalleryPairLine
-                            setPrice={nextTwo == null ? yearGallery : nextTwo}
-                            percent={galleryPair}
-                            fromCurrent={nextTwo == null && currentTwo != null}
-                          />
+                          <GalleryStay twoPerson={yearGallery} place={adultPlace} pairPercent={pairForBeds} fromCurrent={nextTwo == null && currentTwo != null} />
+                          {family || extraBeds ? (
+                            <GalleryPairLine
+                              setPrice={nextTwo == null ? yearGallery : nextTwo}
+                              percent={galleryPair}
+                              fromCurrent={nextTwo == null && currentTwo != null}
+                            />
+                          ) : null}
                         </>
                       ) : null}
                     </td>
@@ -1194,7 +1203,7 @@ function WebCompareCard({
                 })}
                 {nextChildGuests.map((count) => (
                   <td key={`next-child-${count}`} className={cn(bodyCell, "align-top text-right")}>
-                    <GalleryStay twoPerson={yearGallery} place={adultPlace} pairPercent={galleryPair} fromCurrent={nextTwo == null && currentTwo != null} />
+                    <GalleryStay twoPerson={yearGallery} place={adultPlace} pairPercent={pairForBeds} fromCurrent={nextTwo == null && currentTwo != null} />
                   </td>
                 ))}
               </tr>
