@@ -36,6 +36,7 @@ import {
   familyGalleryTwoPerson,
   galleryAdultPrice,
   galleryPairSentence,
+  galleryPairStay,
   clonePrices,
   datesDiffer,
   defaultPersonRates,
@@ -1139,7 +1140,7 @@ function WebCompareCard({
                       <PerPerson amount={amount} guests={count} commission={commission} earlyBooking={earlyBooking} />
                       {(family || extraBeds) && count === 2 ? (
                         <>
-                          <GalleryStay twoPerson={amount} place={adultPlace} />
+                          <GalleryStay twoPerson={amount} place={adultPlace} pairPercent={galleryPair} />
                           <GalleryPairLine setPrice={amount} percent={galleryPair} />
                         </>
                       ) : null}
@@ -1148,7 +1149,7 @@ function WebCompareCard({
                 })}
                 {childGuests.map((count) => (
                   <td key={`web-child-${count}`} className={cn(bodyCell, "align-top text-right")}>
-                    <GalleryStay twoPerson={currentTwo} place={adultPlace} />
+                    <GalleryStay twoPerson={currentTwo} place={adultPlace} pairPercent={galleryPair} />
                   </td>
                 ))}
                 {nextPriceGuests.map((count) => {
@@ -1180,7 +1181,7 @@ function WebCompareCard({
                       ) : null}
                       {(family || extraBeds) && count === 2 ? (
                         <>
-                          <GalleryStay twoPerson={yearGallery} place={adultPlace} fromCurrent={nextTwo == null && currentTwo != null} />
+                          <GalleryStay twoPerson={yearGallery} place={adultPlace} pairPercent={galleryPair} fromCurrent={nextTwo == null && currentTwo != null} />
                           <GalleryPairLine
                             setPrice={nextTwo == null ? yearGallery : nextTwo}
                             percent={galleryPair}
@@ -1193,7 +1194,7 @@ function WebCompareCard({
                 })}
                 {nextChildGuests.map((count) => (
                   <td key={`next-child-${count}`} className={cn(bodyCell, "align-top text-right")}>
-                    <GalleryStay twoPerson={yearGallery} place={adultPlace} fromCurrent={nextTwo == null && currentTwo != null} />
+                    <GalleryStay twoPerson={yearGallery} place={adultPlace} pairPercent={galleryPair} fromCurrent={nextTwo == null && currentTwo != null} />
                   </td>
                 ))}
               </tr>
@@ -1351,18 +1352,25 @@ function GalleryStay({
   twoPerson,
   fromCurrent,
   place = "v galeriji",
+  pairPercent = null,
 }: {
   twoPerson: number | null;
   fromCurrent?: boolean;
   place?: string;
+  pairPercent?: number | null;
 }) {
-  const adult = galleryAdultPrice(twoPerson);
-  if (adult == null) return <span className="mt-1 block text-xs text-muted-foreground">—</span>;
-  const bands = childPrices(adult);
+  const single = galleryAdultPrice(twoPerson);
+  if (single == null) return <span className="mt-1 block text-xs text-muted-foreground">—</span>;
+  const pair = galleryPairStay(twoPerson, pairPercent);
+  const adult = pair?.each ?? single;
+  const bands = childPrices(single);
   return (
     <span className="mt-1 block border-t border-[#e4d8c4] pt-1 text-right text-[11px] leading-snug text-muted-foreground">
       {fromCurrent ? <span className="block">iz trenutnega WEB</span> : null}
-      <span className="block font-medium text-[#1c1915]">odrasla oseba {place} {formatEuro(adult)}</span>
+      <span className="block font-medium text-[#1c1915]">
+        odrasla oseba {place} {formatEuro(adult)}
+        {pair ? <span className="font-normal"> (−{formatPercent(pair.percent)})</span> : null}
+      </span>
       {bands.map((band) => (
         <span key={band.id} className="mt-0.5 block">
           {band.free
