@@ -88,9 +88,9 @@ function nextStamp(previous?: number): number {
 }
 
 const SEASON_SOFT: Record<string, string> = {
-  zima: "bg-[#d7e8f5]",
-  "pomlad-jesen": "bg-[#dcecd6]",
-  "poletje-december": "bg-[#f8e0c0]",
+  zima: "bg-[#eef5fb]",
+  "pomlad-jesen": "bg-[#f3f8ef]",
+  "poletje-december": "bg-[#fdf6eb]",
 };
 
 const BORDO = "#7a1f33";

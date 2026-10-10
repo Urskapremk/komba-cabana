@@ -363,9 +363,9 @@ function Money({ line }: { line: EarnLine }) {
 }
 
 function sliceTone(seasonId: string): string {
-  if (seasonId === "zima") return "bg-[#d7e8f5]";
-  if (seasonId === "pomlad-jesen") return "bg-[#dcecd6]";
-  return "bg-[#f8e0c0]";
+  if (seasonId === "zima") return "bg-[#eef5fb]";
+  if (seasonId === "pomlad-jesen") return "bg-[#f3f8ef]";
+  return "bg-[#fdf6eb]";
 }
 
 const head = "border border-[#e4d8c4] px-2 py-2 font-medium";
