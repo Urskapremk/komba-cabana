@@ -1732,53 +1732,11 @@ function Rules() {
     <section className="grid min-w-0 gap-4 lg:grid-cols-2">
       <article className="min-w-0 overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
         <div className="bg-[#1c1915] px-4 py-3 text-[#f6f1e7]">
-          <h2 className="font-heading text-lg tracking-tight">Minimalne cene 2026</h2>
+          <h2 className="font-heading text-lg tracking-tight">Minimalna cena 2027</h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[320px] text-sm">
-            <thead>
-              <tr className="bg-[#efe6d4] text-left text-xs tracking-wide text-[#5c5142] uppercase">
-                <th className="px-4 py-2 font-medium">Bungalov</th>
-                <th className="px-3 py-2 font-medium">Izven sezone</th>
-                <th className="px-3 py-2 font-medium">V sezoni</th>
-                <th className="px-4 py-2 font-medium">Celo leto</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-t border-border/70">
-                <td className="px-4 py-3 font-medium">Bungalow I - Family · 4+0</td>
-                <td className="px-3 py-3 tabular-nums">475 €</td>
-                <td className="px-3 py-3 tabular-nums">570 €</td>
-                <td className="px-4 py-3 text-muted-foreground">—</td>
-              </tr>
-              <tr className="border-t border-border/70 bg-[#faf6ee]">
-                <td className="px-4 py-3 font-medium">II · 2+0</td>
-                <td className="px-3 py-3 text-muted-foreground">—</td>
-                <td className="px-3 py-3 text-muted-foreground">—</td>
-                <td className="px-4 py-3 tabular-nums">200 €</td>
-              </tr>
-              <tr className="border-t border-border/70">
-                <td className="px-4 py-3">
-                  <span className="font-medium">III · 2+0</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Vaša cena, lanska iz 2025
-                  </span>
-                </td>
-                <td className="px-3 py-3 text-muted-foreground">—</td>
-                <td className="px-3 py-3 text-muted-foreground">—</td>
-                <td className="px-4 py-3 tabular-nums">200 €</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p className="px-4 py-3 text-sm leading-relaxed text-muted-foreground">
-          Optima prosi, da javite, če za 2026 dovolita drugačne minimalne cene. Ramena in novo leto
-          v pismu nista posebej omejena.
+        <p className="px-4 py-3 text-sm leading-relaxed text-[#3f3424]">
+          {PERSON_FLOOR_2027} € na osebo, pri vseh bungalovih, celo leto.
         </p>
-        <div className="border-t border-[#e4d8c4] bg-[#f3e6c8] px-4 py-3 text-sm leading-relaxed text-[#3f3424]">
-          <p className="font-medium">Minimalna cena 2027</p>
-          <p className="mt-1">{PERSON_FLOOR_2027} € na osebo, pri vseh bungalovih, celo leto.</p>
-        </div>
       </article>
 
       <article className="min-w-0 overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
