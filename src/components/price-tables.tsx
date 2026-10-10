@@ -752,7 +752,7 @@ export function PriceTables() {
             Beach Villi. Pri Bungalow I - Family sta v tabeli ceni za 2 osebi in 1 osebo, zraven pa otroka v galeriji.
               Ena odrasla oseba v galeriji plača polovico cene za 2 osebi. Če sta v galeriji dva odrasla, vpišeš odstotek popusta od cene za 2 osebi. V letu 2027 se vpisujeta samo ti dve ceni.
             Beach Villa IV ima ceno za 2 gosta in za 1 osebo ter dve dodatni ležišči. Na ležišču je lahko otrok ali odrasla oseba. Če sta v bungalovu še dva odrasla, vpišeš odstotek popusta.
-            Bungalov III ima eno dodatno ležišče. Odrasla oseba ali otrok se računata enako kot v galeriji pri Bungalowu I. Odstotek zniža ceno odrasle osebe na tem ležišču.
+            Bungalov II in III imata eno dodatno ležišče. Odrasla oseba ali otrok se računata enako kot v galeriji pri Bungalowu I. Odstotek zniža ceno odrasle osebe na tem ležišču.
             Pri ceni je kljukica: označi jo, ko je cena pripravljena. Zelena pomeni pravilno.
             Dokler dviga ni, ima Beach Villa za 2 in 1 osebo ceno 2027 kot Bungalow I - Family. Dodatni ležišči se računata iz cene za 2 osebi.
             Prazniki
@@ -929,7 +929,7 @@ function WebCompareCard({
   const linkedToFamily = unitId === "beach-4";
   const family = unitId === "ocean-1";
   const extraBeds = unitId === "beach-4";
-  const oneExtraBed = unitId === "garden-3";
+  const oneExtraBed = unitId === "ocean-2" || unitId === "garden-3";
   const priceGuests = family || extraBeds ? [2, 1] : personColumns(card.capacity);
   const childGuests = family || extraBeds ? [3, 4] : oneExtraBed ? [3] : [];
   const nextPriceGuests = web2027Columns(unitId);
@@ -1027,7 +1027,7 @@ function WebCompareCard({
             <span className="ml-2">odstotek zniža ceno odrasle osebe</span>
           </p>
           <PercentLift
-            label="Dodatno ležišče, odstotek"
+            label={`${card.name}, dodatno ležišče, odstotek`}
             value={galleryPair}
             onApply={onGalleryPair}
             action="Izračunaj"
