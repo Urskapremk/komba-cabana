@@ -24,7 +24,10 @@ import {
   guestCounts,
   personRateCard,
   childPrices,
+  extraBedLabel,
+  extraBedSentence,
   familyChildLabel,
+  web2027Columns,
   familyGalleryTwoPerson,
   galleryAdultPrice,
   galleryPairSentence,
@@ -304,13 +307,15 @@ describe("cene po osebah", () => {
     assert.equal(liftAmount(null, 5), null);
     const beach = liftPersonUnit("beach-4", defaultPersonRates()["beach-4"], 5);
     assert.ok(beach);
-    assert.equal(beach.zima[4], 588);
-    assert.equal(beach.zima[3], 494);
     assert.equal(beach.zima[2], 399);
-    assert.equal(beach.zima[1], 399);
-    assert.equal(beach["pomlad-jesen"][4], 704);
-    assert.equal(beach["poletje-december"][4], 735);
-    assert.equal(beach["poletje-december"][3], 641);
+    assert.equal(beach.zima[4], null);
+    assert.equal(beach.zima[3], null);
+    assert.equal(beach.zima[1], null);
+    assert.equal(beach["pomlad-jesen"][2], 515);
+    assert.equal(beach["pomlad-jesen"][4], null);
+    assert.equal(beach["poletje-december"][2], 546);
+    assert.equal(beach["poletje-december"][4], null);
+    assert.equal(beach["poletje-december"][3], null);
     const cenik = readCenik({ webLift: { "ocean-1": 7.5, "beach-4": 400, "ocean-2": null } });
     assert.equal(cenik?.webLift["ocean-1"], 7.5);
     assert.equal(cenik?.webLift["ocean-2"], null);
@@ -390,6 +395,11 @@ describe("cene po osebah", () => {
     assert.equal(galleryAdultPrice(null), null);
     assert.equal(familyChildLabel(3), "3. oseba, otrok");
     assert.equal(familyChildLabel(4), "4. oseba, otrok");
+    assert.deepEqual(web2027Columns("beach-4"), [2]);
+    assert.equal(extraBedLabel(3), "3. oseba, dodatno ležišče");
+    assert.equal(extraBedLabel(4), "4. oseba, dodatno ležišče");
+    assert.equal(extraBedSentence().includes("dva odrasla"), true);
+    assert.equal(galleryAdultPrice(380), 190);
     assert.equal(familyGalleryTwoPerson(420, null, false), 420);
     assert.equal(familyGalleryTwoPerson(420, 350, false), 420);
     assert.equal(familyGalleryTwoPerson(420, 350, true), 350);
