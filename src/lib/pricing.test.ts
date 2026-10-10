@@ -22,6 +22,9 @@ import {
   guestCounts,
   personRateCard,
   childPrices,
+  familyChildLabel,
+  familyGalleryTwoPerson,
+  galleryAdultPrice,
   PERSON_FLOOR_2027,
   belowPersonFloor2027,
   pricePerPerson,
@@ -370,17 +373,31 @@ describe("cene po osebah", () => {
     assert.equal(belowPersonFloor2027(null), false);
   });
 
-  it("otrok pri 3. ali 4. osebi ima popust od cene odraslega", () => {
-    const winter = childPrices(pricePerPerson(560, 4)!);
+  it("otrok v galeriji ima popust od polovice cene za 2 osebi", () => {
+    assert.equal(galleryAdultPrice(420), 210);
+    assert.equal(galleryAdultPrice(530), 265);
+    assert.equal(galleryAdultPrice(560), 280);
+    assert.equal(galleryAdultPrice(421), 211);
+    assert.equal(galleryAdultPrice(null), null);
+    assert.equal(familyChildLabel(3), "3. oseba, otrok");
+    assert.equal(familyChildLabel(4), "4. oseba, otrok");
+    assert.equal(familyGalleryTwoPerson(420, null, false), 420);
+    assert.equal(familyGalleryTwoPerson(420, 350, false), 420);
+    assert.equal(familyGalleryTwoPerson(420, 350, true), 350);
+    assert.equal(familyGalleryTwoPerson(420, null, true), 420);
+    const winter = childPrices(galleryAdultPrice(420)!);
     assert.equal(winter[0].free, true);
     assert.equal(winter[0].amount, 0);
-    assert.equal(winter[1].amount, 70);
+    assert.equal(winter[1].amount, 105);
     assert.equal(winter[1].offPercent, 50);
-    assert.equal(winter[2].amount, 112);
+    assert.equal(winter[2].amount, 168);
     assert.equal(winter[2].offPercent, 20);
-    const three = childPrices(pricePerPerson(490, 3)!);
-    assert.equal(three[1].amount, 82);
-    assert.equal(three[2].amount, 130);
+    assert.equal(childPrices(galleryAdultPrice(530)!)[1].amount, 133);
+    assert.equal(childPrices(galleryAdultPrice(530)!)[2].amount, 212);
+    assert.equal(childPrices(galleryAdultPrice(560)!)[1].amount, 140);
+    assert.equal(childPrices(galleryAdultPrice(560)!)[2].amount, 224);
+    assert.equal(winter[1].amount === childPrices(pricePerPerson(560, 4)!)[1].amount, false);
+    assert.equal(winter[2].amount === childPrices(pricePerPerson(490, 3)!)[2].amount, false);
   });
 
   it("obdobja kanala se stikajo, julij 9.–13. je v dveh sezonah", () => {

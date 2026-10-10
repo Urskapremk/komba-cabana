@@ -27,6 +27,10 @@ import {
   beachWeb2027FromFamily,
   childPrices,
   childStaySentence,
+  familyChildLabel,
+  familyGallerySentence,
+  familyGalleryTwoPerson,
+  galleryAdultPrice,
   clonePrices,
   datesDiffer,
   defaultPersonRates,
@@ -494,8 +498,9 @@ export function PriceTables() {
             Trenutna cena in leto 2027 sta v isti vrstici. Pod ceno bungalova je preračun na osebo, cena za odraslo osebo.
             Minimalna cena 2027 je {PERSON_FLOOR_2027} € na osebo.             Provizijo agencije in Early booking vpišeš v odstotkih. Pod ceno na osebo piše, koliko ostane.
             Pri 2027 vpišeš odstotek in dvigneš cene tega bungalova od trenutnega WEB, tudi pri
-            Beach Villi. Pri Bungalow I - Family je v letu 2027 samo cena za 1 in 2 osebi. Dokler dviga ni, ima
-            Beach Villa enake cene 2027 kot Bungalow I - Family; kjer pri I cene 2027 ni, vzame njegov trenutni WEB.
+            Beach Villi. Pri Bungalow I - Family sta v tabeli ceni za 2 osebi in 1 osebo, zraven pa otroka v galeriji.
+            Odrasla oseba v galeriji plača polovico cene za 2 osebi. V letu 2027 se vpisujeta samo ti dve ceni.
+            Dokler dviga ni, ima Beach Villa za 2 in 1 osebo ceno 2027 kot Bungalow I - Family, za 3 in 4 pa njegov trenutni WEB.
             Prazniki
             2027 trajajo do 10. 1. 2028. Zimski december 2026 pri variabilnih cenah traja do 18. 12.,
             v predlogu 2027 do 27. 12.
@@ -622,13 +627,17 @@ function WebCompareCard({
   const card = personRateCard(unitId);
   if (!card || !current || !next) return null;
   const linkedToFamily = unitId === "beach-4";
-  const guests = personColumns(card.capacity);
-  const nextGuests = web2027Columns(unitId);
+  const family = unitId === "ocean-1";
+  const priceGuests = family ? [2, 1] : personColumns(card.capacity);
+  const childGuests = family ? [3, 4] : [];
+  const nextPriceGuests = web2027Columns(unitId);
+  const nextChildGuests = family ? [3, 4] : [];
   const currentChanged = PERSON_SEASONS.some((season) =>
-    guests.some((count) => current[season.id]?.[count] !== card.seasons[season.id][count]),
+    personColumns(card.capacity).some((count) => current[season.id]?.[count] !== card.seasons[season.id][count]),
   );
-  const nextChanged = webYearFilled(next, nextGuests);
-  const priceWidth = `${(100 - 18) / (guests.length + nextGuests.length)}%`;
+  const nextChanged = webYearFilled(next, nextPriceGuests);
+  const columnCount = priceGuests.length + childGuests.length + nextPriceGuests.length + nextChildGuests.length;
+  const priceWidth = `${(100 - 18) / columnCount}%`;
 
   return (
     <article className="w-full min-w-0 overflow-hidden rounded-2xl ring-1 ring-foreground/10">
@@ -669,7 +678,7 @@ function WebCompareCard({
       <div id={`${unitId}-fiksne`}>
       <p className="bg-[#f8f1e4] px-4 py-2.5 text-sm leading-relaxed text-[#3f3424]">
         {discountSentence(card)}
-        {card.capacity >= 3 ? ` ${childStaySentence()}` : ""}
+        {family ? ` ${familyGallerySentence()}` : card.capacity >= 3 ? ` ${childStaySentence()}` : ""}
         {card.note ? ` ${card.note}` : ""}
       </p>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#e6d5e0] bg-[#f6eef4] px-4 py-2">
@@ -709,21 +718,27 @@ function WebCompareCard({
             {linkedToFamily && lift == null
               ? "enako kot Bungalow I - Family, ali dvigni od WEB"
               : unitId === "ocean-1"
-                ? "samo cena za 1 in 2 osebi, od WEB"
+                ? "ceni za 2 in 1 osebo od WEB, otroka v galeriji iz cene za 2 osebi"
                 : "vse cene od WEB"}
           </span>
         </p>
         <PercentLift label={`${card.name}, odstotek dviga 2027`} value={lift} onApply={onLift} />
       </div>
-      <div className="max-w-full overflow-hidden bg-card">
-        <table className="w-full table-fixed border-collapse text-sm">
+      <div className="max-w-full overflow-x-auto bg-card">
+        <table className={cn("w-full table-fixed border-collapse text-sm", family && "min-w-[1200px]")}>
           <colgroup>
             <col className="w-[18%]" />
-            {guests.map((count) => (
+            {priceGuests.map((count) => (
               <col key={`web-${count}`} style={{ width: priceWidth }} />
             ))}
-            {nextGuests.map((count) => (
+            {childGuests.map((count) => (
+              <col key={`web-child-${count}`} style={{ width: priceWidth }} />
+            ))}
+            {nextPriceGuests.map((count) => (
               <col key={`next-${count}`} style={{ width: priceWidth }} />
+            ))}
+            {nextChildGuests.map((count) => (
+              <col key={`next-child-${count}`} style={{ width: priceWidth }} />
             ))}
           </colgroup>
           <thead>
@@ -731,34 +746,51 @@ function WebCompareCard({
               <th rowSpan={2} className={cn(headCell, "bg-[#efe6d4] text-left")}>
                 Obdobje
               </th>
-              <th colSpan={guests.length} className={cn(headCell, "bg-[#e4eef2] text-center")}>
+              <th colSpan={priceGuests.length + childGuests.length} className={cn(headCell, "bg-[#e4eef2] text-center")}>
                 WEB
               </th>
-              <th colSpan={nextGuests.length} className={cn(headCell, "bg-[#f3e6c8] text-center")}>
+              <th
+                colSpan={nextPriceGuests.length + nextChildGuests.length}
+                className={cn(headCell, "bg-[#f3e6c8] text-center")}
+              >
                 2027
                 <span className="mt-0.5 block text-[10px] font-normal tracking-normal normal-case">
-                  {unitId === "ocean-1" ? "samo 1 in 2 osebi · " : ""}
+                  {family ? "2 in 1 oseba, otroka izračunana · " : ""}
                   min. {PERSON_FLOOR_2027} € na osebo
                 </span>
               </th>
             </tr>
             <tr className="text-xs tracking-wide text-[#5c5142] uppercase">
-              {guests.map((count) => (
+              {priceGuests.map((count) => (
                 <th key={`web-${count}`} className={cn(headCell, "bg-[#e4eef2] text-right")}>
                   {guestLabel(count)}
                 </th>
               ))}
-              {nextGuests.map((count) => (
+              {childGuests.map((count) => (
+                <th key={`web-child-${count}`} className={cn(headCell, "bg-[#e4eef2] text-right")}>
+                  {familyChildLabel(count)}
+                </th>
+              ))}
+              {nextPriceGuests.map((count) => (
                 <th key={`next-${count}`} className={cn(headCell, "bg-[#f3e6c8] text-right")}>
                   {guestLabel(count)}
+                </th>
+              ))}
+              {nextChildGuests.map((count) => (
+                <th key={`next-child-${count}`} className={cn(headCell, "bg-[#f3e6c8] text-right")}>
+                  {familyChildLabel(count)}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {PERSON_SEASONS.map((season) => (
+            {PERSON_SEASONS.map((season) => {
+              const currentTwo = current[season.id]?.[2] ?? null;
+              const nextTwo = next[season.id]?.[2] ?? null;
+              const yearGallery = familyGalleryTwoPerson(currentTwo, nextTwo, true);
+              return (
               <tr key={season.id} className={SEASON_SOFT[season.id]}>
-                <td className={cn(bodyCell, "text-left")}>
+                <td className={cn(bodyCell, "align-top text-left")}>
                   <span className="font-medium">{season.label}</span>
                   {season.ranges.map((range) => (
                     <span key={`${range.from}-${range.to}`} className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
@@ -766,10 +798,10 @@ function WebCompareCard({
                     </span>
                   ))}
                 </td>
-                {guests.map((count) => {
+                {priceGuests.map((count) => {
                   const amount = current[season.id]?.[count] ?? null;
                   return (
-                    <td key={`web-${count}`} className={cn(bodyCell, "text-right")}>
+                    <td key={`web-${count}`} className={cn(bodyCell, "align-top text-right")}>
                       <EuroInput
                         label={`${card.name}, WEB, ${season.label}, ${guestLabel(count)}`}
                         value={amount}
@@ -784,13 +816,19 @@ function WebCompareCard({
                         />
                       ) : null}
                       <PerPerson amount={amount} guests={count} commission={commission} earlyBooking={earlyBooking} />
+                      {family && count === 2 ? <GalleryStay twoPerson={amount} /> : null}
                     </td>
                   );
                 })}
-                {nextGuests.map((count) => {
+                {childGuests.map((count) => (
+                  <td key={`web-child-${count}`} className={cn(bodyCell, "align-top text-right")}>
+                    <GalleryStay twoPerson={currentTwo} />
+                  </td>
+                ))}
+                {nextPriceGuests.map((count) => {
                   const amount = next[season.id]?.[count] ?? null;
                   return (
-                    <td key={`next-${count}`} className={cn(bodyCell, "text-right")}>
+                    <td key={`next-${count}`} className={cn(bodyCell, "align-top text-right")}>
                       <EuroInput
                         label={`${card.name}, 2027, ${season.label}, ${guestLabel(count)}`}
                         value={amount}
@@ -812,11 +850,20 @@ function WebCompareCard({
                           <Delta base={current[season.id]?.[count] ?? null} next={amount} />
                         </span>
                       ) : null}
+                      {family && count === 2 ? (
+                        <GalleryStay twoPerson={yearGallery} fromCurrent={nextTwo == null && currentTwo != null} />
+                      ) : null}
                     </td>
                   );
                 })}
+                {nextChildGuests.map((count) => (
+                  <td key={`next-child-${count}`} className={cn(bodyCell, "align-top text-right")}>
+                    <GalleryStay twoPerson={yearGallery} fromCurrent={nextTwo == null && currentTwo != null} />
+                  </td>
+                ))}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -892,6 +939,25 @@ function PercentLift({
 function percentText(value: number | null): string {
   if (value === null) return "";
   return new Intl.NumberFormat("sl-SI", { maximumFractionDigits: 1 }).format(value);
+}
+
+function GalleryStay({ twoPerson, fromCurrent }: { twoPerson: number | null; fromCurrent?: boolean }) {
+  const adult = galleryAdultPrice(twoPerson);
+  if (adult == null) return <span className="mt-1 block text-xs text-muted-foreground">—</span>;
+  const bands = childPrices(adult);
+  return (
+    <span className="mt-1 block border-t border-[#e4d8c4] pt-1 text-right text-[11px] leading-snug text-muted-foreground">
+      {fromCurrent ? <span className="block">iz trenutnega WEB</span> : null}
+      <span className="block font-medium text-[#1c1915]">odrasla oseba v galeriji {formatEuro(adult)}</span>
+      {bands.map((band) => (
+        <span key={band.id} className="mt-0.5 block">
+          {band.free
+            ? `${band.label}: bivanje brezplačno (${formatEuro(band.amount)})`
+            : `${band.label}: ${formatEuro(band.amount)} (−${band.offPercent} %)`}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 function PerPerson({

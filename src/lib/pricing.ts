@@ -358,6 +358,7 @@ export const PERSON_RATE_CARDS: PersonRateCard[] = [
     discount: 70,
     minimumPersons: 2,
     minStay: 3,
+    // Paketa za 4 in 3 osebe ostaneta v podatkih. Tabela WEB ju ne kaže.
     seasons: {
       zima: { 4: 560, 3: 490, 2: 420, 1: 420 },
       "pomlad-jesen": { 4: 670, 3: 600, 2: 530, 1: 530 },
@@ -694,13 +695,40 @@ export type ChildBand = {
   offPercent: number;
 };
 
-/** Cena otroka od cene odrasle osebe. Velja, ko je 3. ali 4. oseba otrok. */
+/** Popust otroka od podane cene odrasle osebe. */
 export function childPrices(adult: number): ChildBand[] {
   return [
     { id: "0-5", label: "0–5 let", amount: 0, free: true, offPercent: 100 },
     { id: "5-10", label: "5–10 let", amount: Math.round(adult * 0.5), free: false, offPercent: 50 },
     { id: "10-15", label: "10–15 let", amount: Math.round(adult * 0.8), free: false, offPercent: 20 },
   ];
+}
+
+/** Cena odrasle osebe v galeriji: cena za 2 osebi, deljena z 2, zaokrožena na evro. */
+export function galleryAdultPrice(twoPerson: number | null): number | null {
+  if (twoPerson == null) return null;
+  return Math.round(twoPerson / 2);
+}
+
+/**
+ * Cena za 2 osebi, iz katere se računa galerija.
+ * Trenutni WEB vzame svojo ceno. Leto 2027 vzame vpis, če ga je, sicer trenutni WEB.
+ */
+export function familyGalleryTwoPerson(
+  currentTwo: number | null,
+  nextTwo: number | null,
+  year: boolean,
+): number | null {
+  if (year) return nextTwo ?? currentTwo;
+  return currentTwo;
+}
+
+export function familyChildLabel(count: number): string {
+  return `${count}. oseba, otrok`;
+}
+
+export function familyGallerySentence(): string {
+  return "V galeriji spijo otroci. Odrasla oseba v galeriji plača polovico cene za 2 osebi. Otrok: 0–5 let bivanje brezplačno, 5–10 let −50 %, 10–15 let −20 % od te cene.";
 }
 
 export function childStaySentence(): string {
@@ -774,8 +802,9 @@ export function liftAmount(amount: number | null, percent: number): number | nul
 }
 
 /**
- * WEB 2027 za Beach Villa je enak Bungalow I - Family.
- * Vpisana cena 2027 pri I ima prednost, sicer velja trenutni WEB pri I.
+ * WEB 2027 za Beach Villa sledi Bungalow I - Family, dokler Beach nima lastnega dviga.
+ * Za 2 in 1 osebo velja vpisana cena 2027 pri I, sicer trenutni WEB pri I.
+ * Za 3 in 4 osebe ostane trenutni WEB pri I.
  */
 export function beachWeb2027FromFamily(web2027: PersonRates, web: PersonRates): PersonRates[string] {
   const familyNext = web2027["ocean-1"];
