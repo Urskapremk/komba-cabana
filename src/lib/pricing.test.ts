@@ -46,6 +46,7 @@ import {
   liftAmount,
   liftPersonUnit,
   afterChannels,
+  bookingAverageFrom2026,
   afterDiscounts,
   netAfterCommission,
   parseCommission,
@@ -388,6 +389,9 @@ describe("cene po osebah", () => {
     assert.deepEqual(afterChannels(400, null, 15), { optima: null, booking: 60, left: 340 });
     assert.equal(afterChannels(400, null, null), null);
     assert.equal(afterChannels(null, 10, 15), null);
+    assert.deepEqual(bookingAverageFrom2026(490, 731, 30), { average: 611, booking: 183 });
+    assert.equal(bookingAverageFrom2026(490, 731, null), null);
+    assert.equal(bookingAverageFrom2026(null, null, 30), null);
     const cenik = readCenik({ optima: { "ocean-1": 12.5, "beach-4": 120 }, booking: { "garden-3": 18 } });
     assert.equal(cenik?.optima["ocean-1"], 12.5);
     assert.equal(cenik?.optima["beach-4"], null);
