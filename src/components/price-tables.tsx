@@ -86,9 +86,9 @@ function nextStamp(previous?: number): number {
 }
 
 const SEASON_SOFT: Record<string, string> = {
-  zima: "bg-[#f3f7f9]",
-  "pomlad-jesen": "bg-[#faf6ee]",
-  "poletje-december": "bg-[#fbf6ec]",
+  zima: "bg-[#d7e8f5]",
+  "pomlad-jesen": "bg-[#dcecd6]",
+  "poletje-december": "bg-[#f8e0c0]",
 };
 
 function subscribeStore(onChange: () => void) {

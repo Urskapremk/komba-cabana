@@ -203,7 +203,7 @@ export function YearEarnings({
                     <td className={cn(cell, "text-right tabular-nums")}>{formatEuro(slice.gross)}</td>
                     <td className={cn(cell, "text-right tabular-nums text-[#6b3058]")}>{formatEuro(slice.agency)}</td>
                     <td className={cn(cell, "text-right tabular-nums text-[#1e3a46]")}>{formatEuro(slice.early)}</td>
-                    <td className={cn(cell, "bg-[#fbf6ec] text-right font-medium tabular-nums")}>{formatEuro(slice.left)}</td>
+                    <td className={cn(cell, "text-right font-medium tabular-nums")}>{formatEuro(slice.left)}</td>
                   </tr>
                 ))
                 ),
@@ -363,9 +363,9 @@ function Money({ line }: { line: EarnLine }) {
 }
 
 function sliceTone(seasonId: string): string {
-  if (seasonId === "zima") return "bg-[#f3f7f9]";
-  if (seasonId === "pomlad-jesen") return "bg-[#faf6ee]";
-  return "bg-[#fbf6ec]";
+  if (seasonId === "zima") return "bg-[#d7e8f5]";
+  if (seasonId === "pomlad-jesen") return "bg-[#dcecd6]";
+  return "bg-[#f8e0c0]";
 }
 
 const head = "border border-[#e4d8c4] px-2 py-2 font-medium";
