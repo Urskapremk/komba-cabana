@@ -69,17 +69,21 @@ export function LookProposals() {
   const prices = overrides[key] ?? BASE[unit][season].next;
   const locked = BASE[unit][season].now;
   const shown = typed === "" ? prices[field] : Number(typed);
-  const adult = adultOnBed(prices.two, percent);
+  const live = {
+    two: field === "two" && typed !== "" ? shown : prices.two,
+    one: field === "one" && typed !== "" ? shown : prices.one,
+  };
+  const adult = adultOnBed(live.two, percent);
   const childYoung = Math.round(adult * 0.5);
   const childOlder = Math.round(adult * 0.8);
 
   const ticket = useMemo(
     () => [
-      { label: "2 osebi", now: locked.two, next: prices.two },
-      { label: "1 oseba", now: locked.one, next: prices.one },
+      { label: "2 osebi", now: locked.two, next: live.two },
+      { label: "1 oseba", now: locked.one, next: live.one },
       { label: `Odrasla ${place.where}`, now: adultOnBed(locked.two, percent), next: adult },
     ],
-    [adult, locked.one, locked.two, percent, place.where, prices.one, prices.two],
+    [adult, live.one, live.two, locked.one, locked.two, percent, place.where],
   );
 
   function press(digit: string) {
@@ -100,11 +104,11 @@ export function LookProposals() {
 
   function savePreview() {
     commit();
-    setNotice("V predogledu se ne shrani. Delovni cenik je na prvi strani.");
+    setNotice("To je predogled. Shranjene cene ostanejo na prvi strani.");
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-[#10241f] text-[#f6f1e7]">
+    <div className="flex min-h-dvh flex-col bg-[#10241f] text-[#f6f1e7] lg:h-dvh lg:overflow-hidden">
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[#d4b483]/30 px-4 py-3 md:px-5">
         <div className="min-w-0">
           <p className="text-[11px] tracking-[0.28em] text-[#d4b483] uppercase">Komba Cabana</p>
@@ -112,7 +116,7 @@ export function LookProposals() {
         </div>
         <div className="hidden text-right text-sm text-[#f6f1e7]/70 sm:block">
           <p>Recepcija</p>
-          <p className="text-xs text-[#d4b483]">Predogled, ni shranjevanja</p>
+          <p className="text-xs text-[#d4b483]">Samo predogled</p>
         </div>
         <Link
           href="/"
@@ -122,7 +126,7 @@ export function LookProposals() {
         </Link>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[220px_minmax(0,1fr)_300px]">
+      <div className="flex flex-1 flex-col lg:min-h-0 lg:grid lg:grid-cols-[220px_minmax(0,1fr)_300px]">
         <nav className="flex shrink-0 gap-2 overflow-x-auto border-b border-white/10 p-3 lg:flex-col lg:overflow-y-auto lg:border-r lg:border-b-0">
           {UNITS.map((item) => {
             const on = item.id === unit;
@@ -152,7 +156,7 @@ export function LookProposals() {
           })}
         </nav>
 
-        <main className="min-h-0 overflow-y-auto bg-[#f4efe6] p-3 text-[#1c1915] md:p-5">
+        <main className="bg-[#f4efe6] p-3 text-[#1c1915] md:p-5 lg:min-h-0 lg:overflow-y-auto">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {SEASONS.map((item) => {
               const on = item.id === season;
@@ -241,7 +245,7 @@ export function LookProposals() {
 
           <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
             <div className="grid grid-cols-3 gap-2">
-              {["7", "8", "9", "4", "5", "6", "1", "2", "3", "C", "0", "⌫"].map((keycap) => (
+              {["7", "8", "9", "4", "5", "6", "1", "2", "3", "C", "0", "←"].map((keycap) => (
                 <button
                   key={keycap}
                   type="button"
@@ -251,7 +255,7 @@ export function LookProposals() {
                       setOverrides((current) => ({ ...current, [key]: { ...prices, [field]: 0 } }));
                       return;
                     }
-                    if (keycap === "⌫") {
+                    if (keycap === "←") {
                       setTyped((current) => (current === "" ? String(prices[field]) : current).slice(0, -1));
                       return;
                     }
