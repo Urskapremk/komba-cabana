@@ -42,6 +42,7 @@ import {
   PERSON_FLOOR_2027,
   belowPersonFloor2027,
   personColumns,
+  web2027Columns,
   personRateCard,
   pricePerPerson,
   priceDelta,
@@ -484,8 +485,10 @@ export function PriceTables() {
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Trenutna cena in leto 2027 sta v isti vrstici. Pod ceno bungalova je preračun na osebo, cena za odraslo osebo.
             Minimalna cena 2027 je {PERSON_FLOOR_2027} € na osebo.             Provizijo agencije in Early booking vpišeš v odstotkih. Pod ceno na osebo piše, koliko ostane.
-            Pri 2027 vpišeš odstotek in dvigneš vse cene tega bungalova od trenutnega WEB, tudi pri
-            Beach Villi. Dokler dviga ni, ima Beach Villa enake cene 2027 kot Bungalow I - Family. Prazniki
+            Pri 2027 vpišeš odstotek in dvigneš cene tega bungalova od trenutnega WEB, tudi pri
+            Beach Villi. Pri Bungalow I - Family je v letu 2027 samo cena za 1 in 2 osebi. Dokler dviga ni, ima
+            Beach Villa enake cene 2027 kot Bungalow I - Family; kjer pri I cene 2027 ni, vzame njegov trenutni WEB.
+            Prazniki
             2027 trajajo do 10. 1. 2028. Zimski december 2026 pri variabilnih cenah traja do 18. 12.,
             v predlogu 2027 do 27. 12.
           </p>
@@ -601,11 +604,12 @@ function WebCompareCard({
   if (!card || !current || !next) return null;
   const linkedToFamily = unitId === "beach-4";
   const guests = personColumns(card.capacity);
+  const nextGuests = web2027Columns(unitId);
   const currentChanged = PERSON_SEASONS.some((season) =>
     guests.some((count) => current[season.id]?.[count] !== card.seasons[season.id][count]),
   );
-  const nextChanged = webYearFilled(next, guests);
-  const priceWidth = `${(100 - 18) / (guests.length * 2)}%`;
+  const nextChanged = webYearFilled(next, nextGuests);
+  const priceWidth = `${(100 - 18) / (guests.length + nextGuests.length)}%`;
 
   return (
     <article className="w-full min-w-0 overflow-hidden rounded-2xl ring-1 ring-foreground/10">
@@ -666,7 +670,9 @@ function WebCompareCard({
           <span className="ml-2">
             {linkedToFamily && lift == null
               ? "enako kot Bungalow I - Family, ali dvigni od WEB"
-              : "vse cene od WEB"}
+              : unitId === "ocean-1"
+                ? "samo cena za 1 in 2 osebi, od WEB"
+                : "vse cene od WEB"}
           </span>
         </p>
         <PercentLift label={`${card.name}, odstotek dviga 2027`} value={lift} onApply={onLift} />
@@ -678,7 +684,7 @@ function WebCompareCard({
             {guests.map((count) => (
               <col key={`web-${count}`} style={{ width: priceWidth }} />
             ))}
-            {guests.map((count) => (
+            {nextGuests.map((count) => (
               <col key={`next-${count}`} style={{ width: priceWidth }} />
             ))}
           </colgroup>
@@ -690,9 +696,10 @@ function WebCompareCard({
               <th colSpan={guests.length} className={cn(headCell, "bg-[#e4eef2] text-center")}>
                 WEB
               </th>
-              <th colSpan={guests.length} className={cn(headCell, "bg-[#f3e6c8] text-center")}>
+              <th colSpan={nextGuests.length} className={cn(headCell, "bg-[#f3e6c8] text-center")}>
                 2027
                 <span className="mt-0.5 block text-[10px] font-normal tracking-normal normal-case">
+                  {unitId === "ocean-1" ? "samo 1 in 2 osebi · " : ""}
                   min. {PERSON_FLOOR_2027} € na osebo
                 </span>
               </th>
@@ -703,7 +710,7 @@ function WebCompareCard({
                   {guestLabel(count)}
                 </th>
               ))}
-              {guests.map((count) => (
+              {nextGuests.map((count) => (
                 <th key={`next-${count}`} className={cn(headCell, "bg-[#f3e6c8] text-right")}>
                   {guestLabel(count)}
                 </th>
@@ -742,7 +749,7 @@ function WebCompareCard({
                     </td>
                   );
                 })}
-                {guests.map((count) => {
+                {nextGuests.map((count) => {
                   const amount = next[season.id]?.[count] ?? null;
                   return (
                     <td key={`next-${count}`} className={cn(bodyCell, "text-right")}>

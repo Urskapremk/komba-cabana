@@ -417,6 +417,13 @@ export function personColumns(capacity: number): number[] {
   return Array.from({ length: capacity }, (_, index) => capacity - index);
 }
 
+/** Leto 2027 pri Bungalow I ima v WEB samo ceno za 2 osebi in za 1 osebo. */
+export function web2027Columns(unitId: string): number[] {
+  if (unitId === "ocean-1") return [2, 1];
+  const card = personRateCard(unitId);
+  return personColumns(card?.capacity ?? 1);
+}
+
 export function formatMonthDay(monthDay: string): string {
   const [month, day] = monthDay.split("-");
   return `${Number(day)}. ${Number(month)}.`;
@@ -551,7 +558,16 @@ export function sanitizePersonRates(input: unknown): PersonRates | null {
 }
 
 export function sanitizeWeb2027(input: unknown): PersonRates | null {
-  return readPersonGrid(input, emptyPersonRates());
+  const grid = readPersonGrid(input, emptyPersonRates());
+  if (!grid) return null;
+  const kept = new Set(web2027Columns("ocean-1"));
+  for (const season of PERSON_SEASONS) {
+    const row = grid["ocean-1"][season.id];
+    for (const count of personColumns(4)) {
+      if (!kept.has(count)) row[count] = null;
+    }
+  }
+  return grid;
 }
 
 function readPercentMap(input: unknown, min: number, max: number): WebLift | null {
@@ -767,8 +783,10 @@ export function beachWeb2027FromFamily(web2027: PersonRates, web: PersonRates): 
   const seasons = {} as PersonRates[string];
   for (const season of PERSON_SEASONS) {
     const row: Record<number, number | null> = {};
+    const familyYear = new Set(web2027Columns("ocean-1"));
     for (const count of personColumns(4)) {
-      row[count] = familyNext?.[season.id]?.[count] ?? familyWeb?.[season.id]?.[count] ?? null;
+      const fromNext = familyYear.has(count) ? familyNext?.[season.id]?.[count] : null;
+      row[count] = fromNext ?? familyWeb?.[season.id]?.[count] ?? null;
     }
     seasons[season.id] = row;
   }
@@ -784,10 +802,11 @@ export function liftPersonUnit(
   const card = personRateCard(unitId);
   if (!card || !Number.isFinite(percent)) return null;
   const seasons = {} as PersonRates[string];
+  const kept = new Set(web2027Columns(unitId));
   for (const season of PERSON_SEASONS) {
     const row: Record<number, number | null> = {};
     for (const count of personColumns(card.capacity)) {
-      row[count] = liftAmount(current[season.id]?.[count] ?? null, percent);
+      row[count] = kept.has(count) ? liftAmount(current[season.id]?.[count] ?? null, percent) : null;
     }
     seasons[season.id] = row;
   }
