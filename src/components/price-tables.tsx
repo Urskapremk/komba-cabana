@@ -1092,7 +1092,7 @@ function WebCompareCard({
                 Obdobje
               </th>
               <th colSpan={priceGuests.length + childGuests.length} className={cn(headCell, "bg-[#e4eef2] text-center")}>
-                WEB
+                2026
               </th>
               <th
                 colSpan={nextPriceGuests.length + nextChildGuests.length}
