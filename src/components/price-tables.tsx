@@ -987,7 +987,10 @@ function WebCompareCard({
     personColumns(card.capacity).some((count) => current[season.id]?.[count] !== card.seasons[season.id][count]),
   );
   const nextChanged = webYearFilled(next, nextPriceGuests);
-  const columnCount = priceGuests.length + childGuests.length + nextPriceGuests.length + nextChildGuests.length;
+  const [show2026, setShow2026] = useState(true);
+  const webGuests = show2026 ? priceGuests : [];
+  const webChildren = show2026 ? childGuests : [];
+  const columnCount = webGuests.length + webChildren.length + nextPriceGuests.length + nextChildGuests.length;
   const priceWidth = `${(100 - 18) / columnCount}%`;
 
   return (
@@ -1015,6 +1018,15 @@ function WebCompareCard({
           </button>
         </h3>
         <div className="flex flex-wrap gap-2 py-3">
+          <Button
+            size="sm"
+            variant="secondary"
+            aria-pressed={show2026}
+            aria-label={`${card.name}, ${show2026 ? "Skrij 2026" : "Pokaži 2026"}`}
+            onClick={() => setShow2026((shown) => !shown)}
+          >
+            {show2026 ? "Skrij 2026" : "Pokaži 2026"}
+          </Button>
           <Button size="sm" variant={fixed ? "secondary" : "default"} aria-label={`${card.name}, Shrani`} onClick={onSave}>
             {fixed ? "Shranjeno" : "Shrani"}
           </Button>
@@ -1116,13 +1128,13 @@ function WebCompareCard({
         <PercentLift label={`${card.name}, odstotek dviga 2027`} value={lift} onApply={onLift} />
       </div>
       <div className="max-w-full overflow-x-auto bg-card">
-        <table className={cn("w-full table-fixed border-collapse text-sm", (family || extraBeds || oneExtraBed) && "min-w-[1200px]")}>
+        <table className={cn("w-full table-fixed border-collapse text-sm", show2026 && (family || extraBeds || oneExtraBed) && "min-w-[1200px]")}>
           <colgroup>
             <col className="w-[18%]" />
-            {priceGuests.map((count) => (
+            {webGuests.map((count) => (
               <col key={`web-${count}`} style={{ width: priceWidth }} />
             ))}
-            {childGuests.map((count) => (
+            {webChildren.map((count) => (
               <col key={`web-child-${count}`} style={{ width: priceWidth }} />
             ))}
             {nextPriceGuests.map((count) => (
@@ -1137,9 +1149,11 @@ function WebCompareCard({
               <th rowSpan={2} className={cn(headCell, "bg-[#efe6d4] text-left")}>
                 Obdobje
               </th>
-              <th colSpan={priceGuests.length + childGuests.length} className={cn(headCell, "bg-[#e4eef2] text-center")}>
-                2026
-              </th>
+              {show2026 ? (
+                <th colSpan={webGuests.length + webChildren.length} className={cn(headCell, "bg-[#e4eef2] text-center")}>
+                  2026
+                </th>
+              ) : null}
               <th
                 colSpan={nextPriceGuests.length + nextChildGuests.length}
                 className={cn(headCell, "bg-[#f3e6c8] text-center")}
@@ -1153,12 +1167,12 @@ function WebCompareCard({
               </th>
             </tr>
             <tr className="text-xs tracking-wide text-[#5c5142] uppercase">
-              {priceGuests.map((count) => (
+              {webGuests.map((count) => (
                 <th key={`web-${count}`} className={cn(headCell, "bg-[#e4eef2] text-right")}>
                   {guestLabel(count)}
                 </th>
               ))}
-              {childGuests.map((count) => (
+              {webChildren.map((count) => (
                 <th key={`web-child-${count}`} className={cn(headCell, "bg-[#e4eef2] text-right")}>
                   {bedLabel(count)}
                 </th>
@@ -1202,7 +1216,7 @@ function WebCompareCard({
                     </span>
                   ))}
                 </td>
-                {priceGuests.map((count) => {
+                {webGuests.map((count) => {
                   const amount = current[season.id]?.[count] ?? null;
                   return (
                     <td key={`web-${count}`} className={cn(bodyCell, "align-top text-right")}>
@@ -1225,7 +1239,7 @@ function WebCompareCard({
                     </td>
                   );
                 })}
-                {childGuests.map((count) => (
+                {webChildren.map((count) => (
                   <td key={`web-child-${count}`} className={cn(bodyCell, "align-top text-right")}>
                     <GalleryStay twoPerson={currentTwo} place={adultPlace} pairPercent={oneExtraBed ? galleryPair : pairForBeds} singleBed={oneExtraBed} />
                     {oneExtraBed ? <ExtraBedLine twoPerson={currentTwo} percent={galleryPair} /> : null}
