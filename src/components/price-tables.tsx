@@ -486,7 +486,7 @@ export function PriceTables() {
             Trenutna cena in leto 2027 sta v isti vrstici. Pod ceno bungalova je preračun na osebo, cena za odraslo osebo.
             Minimalna cena 2027 je {PERSON_FLOOR_2027} € na osebo.             Provizijo agencije in Early booking vpišeš v odstotkih. Pod ceno na osebo piše, koliko ostane.
             Pri 2027 vpišeš odstotek in dvigneš cene tega bungalova od trenutnega WEB, tudi pri
-            Beach Villi. Pri Bungalow I - Family je v letu 2027 samo cena za 1 in 2 osebi. Dokler dviga ni, ima
+            Beach Villi. Pri Bungalow I - Family je v letu 2027 samo cena za 2 osebi. Dokler dviga ni, ima
             Beach Villa enake cene 2027 kot Bungalow I - Family; kjer pri I cene 2027 ni, vzame njegov trenutni WEB.
             Prazniki
             2027 trajajo do 10. 1. 2028. Zimski december 2026 pri variabilnih cenah traja do 18. 12.,
@@ -671,7 +671,7 @@ function WebCompareCard({
             {linkedToFamily && lift == null
               ? "enako kot Bungalow I - Family, ali dvigni od WEB"
               : unitId === "ocean-1"
-                ? "samo cena za 1 in 2 osebi, od WEB"
+                ? "samo cena za 2 osebi, od WEB"
                 : "vse cene od WEB"}
           </span>
         </p>
@@ -699,7 +699,7 @@ function WebCompareCard({
               <th colSpan={nextGuests.length} className={cn(headCell, "bg-[#f3e6c8] text-center")}>
                 2027
                 <span className="mt-0.5 block text-[10px] font-normal tracking-normal normal-case">
-                  {unitId === "ocean-1" ? "samo 1 in 2 osebi · " : ""}
+                  {unitId === "ocean-1" ? "samo 2 osebi · " : ""}
                   min. {PERSON_FLOOR_2027} € na osebo
                 </span>
               </th>

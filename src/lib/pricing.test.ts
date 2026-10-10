@@ -226,7 +226,7 @@ describe("shranjene cene", () => {
     assert.equal(cenik.web2027["ocean-1"].zima[4], null);
     assert.equal(cenik.web2027["ocean-1"].zima[3], null);
     assert.equal(cenik.web2027["ocean-1"].zima[2], 450);
-    assert.equal(cenik.web2027["ocean-1"].zima[1], 400);
+    assert.equal(cenik.web2027["ocean-1"].zima[1], null);
     assert.equal(cenik.web2027["ocean-2"]["pomlad-jesen"][2], null);
     assert.equal(cenik.web2027["beach-4"]["poletje-december"][1], 500);
     assert.equal(cenik.personRates["ocean-1"].zima[4], 560);
@@ -282,12 +282,12 @@ describe("cene po osebah", () => {
     assert.equal(lifted.zima[4], null);
     assert.equal(lifted.zima[3], null);
     assert.equal(lifted.zima[2], 441);
-    assert.equal(lifted.zima[1], 441);
+    assert.equal(lifted.zima[1], null);
     assert.equal(lifted["pomlad-jesen"][2], 557);
-    assert.equal(lifted["pomlad-jesen"][1], 557);
+    assert.equal(lifted["pomlad-jesen"][1], null);
     assert.equal(lifted["pomlad-jesen"][4], null);
     assert.equal(lifted["poletje-december"][2], 588);
-    assert.equal(lifted["poletje-december"][1], 588);
+    assert.equal(lifted["poletje-december"][1], null);
     assert.equal(lifted["poletje-december"][4], null);
     assert.equal(liftAmount(null, 5), null);
     const beach = liftPersonUnit("beach-4", defaultPersonRates()["beach-4"], 5);
@@ -323,7 +323,8 @@ describe("cene po osebah", () => {
     assert.equal(mixed.zima[2], 441);
     assert.equal(mixed.zima[4], 560);
     assert.equal(mixed.zima[3], 490);
-    assert.equal(mixed["poletje-december"][1], 588);
+    assert.equal(mixed.zima[1], 420);
+    assert.equal(mixed["poletje-december"][1], 560);
     assert.equal(mixed["poletje-december"][4], 700);
   });
 
