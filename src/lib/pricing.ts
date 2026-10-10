@@ -417,9 +417,9 @@ export function personColumns(capacity: number): number[] {
   return Array.from({ length: capacity }, (_, index) => capacity - index);
 }
 
-/** Leto 2027 pri Bungalow I ima v WEB samo ceno za 2 osebi. */
+/** Leto 2027 pri Bungalow I ima v WEB samo ceno za 2 osebi in za 1 osebo. */
 export function web2027Columns(unitId: string): number[] {
-  if (unitId === "ocean-1") return [2];
+  if (unitId === "ocean-1") return [2, 1];
   const card = personRateCard(unitId);
   return personColumns(card?.capacity ?? 1);
 }
@@ -774,8 +774,8 @@ export function liftAmount(amount: number | null, percent: number): number | nul
 }
 
 /**
- * WEB 2027 za Beach Villa sledi Bungalow I - Family, dokler Beach nima lastnega dviga.
- * Samo vpisana cena 2027 za 2 osebi pri I prepiše trenutni WEB. Ostale osebe ostanejo na trenutnem WEB pri I.
+ * WEB 2027 za Beach Villa je enak Bungalow I - Family.
+ * Vpisana cena 2027 pri I ima prednost, sicer velja trenutni WEB pri I.
  */
 export function beachWeb2027FromFamily(web2027: PersonRates, web: PersonRates): PersonRates[string] {
   const familyNext = web2027["ocean-1"];
