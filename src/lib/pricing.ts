@@ -418,10 +418,9 @@ export function personColumns(capacity: number): number[] {
   return Array.from({ length: capacity }, (_, index) => capacity - index);
 }
 
-/** Leto 2027 v WEB: Bungalow I samo 2 in 1 osebo, Beach Villa samo 2 gosta. */
+/** Leto 2027 v WEB: Bungalow I in Beach Villa samo ceno za 2 in 1 osebo. */
 export function web2027Columns(unitId: string): number[] {
-  if (unitId === "ocean-1") return [2, 1];
-  if (unitId === "beach-4") return [2];
+  if (unitId === "ocean-1" || unitId === "beach-4") return [2, 1];
   const card = personRateCard(unitId);
   return personColumns(card?.capacity ?? 1);
 }
@@ -1049,7 +1048,7 @@ export function extraBedLabel(count: number): string {
 }
 
 export function extraBedSentence(): string {
-  return "Cena je za 2 gosta. Dve dodatni ležišči sta za otroka ali odraslo osebo. Ena odrasla oseba na dodatnem ležišču plača polovico cene za 2 osebi. Če sta v bungalovu še dva odrasla, vpišeš odstotek popusta od cene za 2 osebi. Otrok: 0–5 let bivanje brezplačno, 5–10 let −50 %, 10–15 let −20 % od cene ene odrasle osebe.";
+  return "Cena je za 2 gosta ali za 1 osebo. Dve dodatni ležišči sta za otroka ali odraslo osebo. Ena odrasla oseba na dodatnem ležišču plača polovico cene za 2 osebi. Če sta v bungalovu še dva odrasla, vpišeš odstotek popusta od cene za 2 osebi. Otrok: 0–5 let bivanje brezplačno, 5–10 let −50 %, 10–15 let −20 % od cene ene odrasle osebe.";
 }
 
 export function familyGallerySentence(): string {

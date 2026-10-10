@@ -748,9 +748,9 @@ export function PriceTables() {
             Pri 2027 vpišeš odstotek in dvigneš cene tega bungalova od trenutnega WEB, tudi pri
             Beach Villi. Pri Bungalow I - Family sta v tabeli ceni za 2 osebi in 1 osebo, zraven pa otroka v galeriji.
               Ena odrasla oseba v galeriji plača polovico cene za 2 osebi. Če sta v galeriji dva odrasla, vpišeš odstotek popusta od cene za 2 osebi. V letu 2027 se vpisujeta samo ti dve ceni.
-            Beach Villa IV ima ceno samo za 2 gosta in dve dodatni ležišči. Na ležišču je lahko otrok ali odrasla oseba. Če sta v bungalovu še dva odrasla, vpišeš odstotek popusta.
+            Beach Villa IV ima ceno za 2 gosta in za 1 osebo ter dve dodatni ležišči. Na ležišču je lahko otrok ali odrasla oseba. Če sta v bungalovu še dva odrasla, vpišeš odstotek popusta.
             Pri ceni je kljukica: označi jo, ko je cena pripravljena. Zelena pomeni pravilno.
-            Dokler dviga ni, ima Beach Villa za 2 gosta ceno 2027 kot Bungalow I - Family. Dodatni ležišči se računata iz te cene.
+            Dokler dviga ni, ima Beach Villa za 2 in 1 osebo ceno 2027 kot Bungalow I - Family. Dodatni ležišči se računata iz cene za 2 osebi.
             Prazniki
             2027 trajajo do 10. 1. 2028. Zimski december 2026 pri variabilnih cenah traja do 18. 12.,
             v predlogu 2027 do 27. 12.
@@ -925,7 +925,7 @@ function WebCompareCard({
   const linkedToFamily = unitId === "beach-4";
   const family = unitId === "ocean-1";
   const extraBeds = unitId === "beach-4";
-  const priceGuests = family ? [2, 1] : extraBeds ? [2] : personColumns(card.capacity);
+  const priceGuests = family || extraBeds ? [2, 1] : personColumns(card.capacity);
   const childGuests = family || extraBeds ? [3, 4] : [];
   const nextPriceGuests = web2027Columns(unitId);
   const nextChildGuests = family || extraBeds ? [3, 4] : [];
@@ -1034,9 +1034,9 @@ function WebCompareCard({
           <span className="font-medium">2027</span>
           <span className="ml-2">
             {linkedToFamily && lift == null
-              ? "za 2 gosta enako kot Bungalow I - Family, dodatni ležišči iz te cene, ali dvigni od WEB"
+              ? "za 2 in 1 osebo enako kot Bungalow I - Family, dodatni ležišči iz cene za 2 osebi, ali dvigni od WEB"
               : extraBeds
-                ? "cena za 2 gosta od WEB, dodatni ležišči iz cene za 2 osebi"
+                ? "ceni za 2 in 1 osebo od WEB, dodatni ležišči iz cene za 2 osebi"
                 : unitId === "ocean-1"
                   ? "ceni za 2 in 1 osebo od WEB, otroka v galeriji iz cene za 2 osebi"
                   : "vse cene od WEB"}
@@ -1075,7 +1075,7 @@ function WebCompareCard({
               >
                 2027
                 <span className="mt-0.5 block text-[10px] font-normal tracking-normal normal-case">
-                  {family ? "2 in 1 oseba, otroka izračunana · " : extraBeds ? "2 gosta, dodatni ležišči izračunani · " : ""}
+                  {family ? "2 in 1 oseba, otroka izračunana · " : extraBeds ? "2 in 1 oseba, dodatni ležišči izračunani · " : ""}
                   min. {PERSON_FLOOR_2027} € na osebo
                 </span>
               </th>

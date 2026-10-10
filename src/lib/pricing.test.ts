@@ -308,9 +308,9 @@ describe("cene po osebah", () => {
     const beach = liftPersonUnit("beach-4", defaultPersonRates()["beach-4"], 5);
     assert.ok(beach);
     assert.equal(beach.zima[2], 399);
+    assert.equal(beach.zima[1], 399);
     assert.equal(beach.zima[4], null);
     assert.equal(beach.zima[3], null);
-    assert.equal(beach.zima[1], null);
     assert.equal(beach["pomlad-jesen"][2], 515);
     assert.equal(beach["pomlad-jesen"][4], null);
     assert.equal(beach["poletje-december"][2], 546);
@@ -395,7 +395,7 @@ describe("cene po osebah", () => {
     assert.equal(galleryAdultPrice(null), null);
     assert.equal(familyChildLabel(3), "3. oseba, otrok");
     assert.equal(familyChildLabel(4), "4. oseba, otrok");
-    assert.deepEqual(web2027Columns("beach-4"), [2]);
+    assert.deepEqual(web2027Columns("beach-4"), [2, 1]);
     assert.equal(extraBedLabel(3), "3. oseba, dodatno ležišče");
     assert.equal(extraBedLabel(4), "4. oseba, dodatno ležišče");
     assert.equal(extraBedSentence().includes("dva odrasla"), true);
