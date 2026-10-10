@@ -62,7 +62,6 @@ import {
   priceDelta,
   liftPersonUnit,
   afterChannels,
-  bookingAverageFrom2026,
   afterDiscounts,
   cenikHasEntries,
   parseCommission,
@@ -1633,13 +1632,11 @@ function ChannelLines({
   optima,
   booking,
   guests,
-  from2026,
 }: {
   amount: number | null;
   optima: number | null;
   booking: number | null;
   guests: number;
-  from2026?: { average: number; booking: number } | null;
 }) {
   const cut = afterChannels(amount, optima, booking);
   if (!cut || cut.left == null) return null;
@@ -1651,11 +1648,6 @@ function ChannelLines({
       ) : null}
       {cut.booking != null ? (
         <span className="block font-medium text-[#1d3f73]">− Booking {formatEuro(cut.booking)}</span>
-      ) : null}
-      {from2026 ? (
-        <span className="block text-[#1d3f73]">
-          povprečje 2026 {formatEuro(from2026.average)}, Booking {formatEuro(from2026.booking)}
-        </span>
       ) : null}
       <span className="block font-medium text-[#1c1915]">ostane {formatEuro(cut.left)}</span>
       {each != null ? (
@@ -1707,6 +1699,7 @@ function VariableChannels({
           action="Izračunaj"
           parse={parseCommission}
         />
+        <p className="w-full text-xs leading-relaxed text-[#1d3f73]">Povprečje iz 2026 v %</p>
       </div>
     </>
   );
@@ -1896,7 +1889,6 @@ function CompareCard({
               const floor = floor2026(unitId, period.id);
               const underFloor = floor !== null && next.min !== null && next.min < floor.amount;
               const baseBand = base.min !== null && base.max !== null ? base.max - base.min : null;
-              const from2026 = bookingAverageFrom2026(base.min, base.max, booking);
               const nextBand = next.min !== null && next.max !== null ? next.max - next.min : null;
               return (
                 <tr key={period.id} className={SEASON_SOFT[tone]}>
@@ -1908,12 +1900,12 @@ function CompareCard({
                   <td className={cn(bodyCell, "text-right")}>
                     <span className="tabular-nums whitespace-nowrap">{formatEuro(base.min)}</span>
                     <PersonNet amount={base.min} guests={capacity} earlyBooking={earlyBooking} />
-                    <ChannelLines amount={base.min} optima={optima} booking={booking} guests={capacity} from2026={from2026} />
+                    <ChannelLines amount={base.min} optima={optima} booking={booking} guests={capacity} />
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <span className="tabular-nums whitespace-nowrap">{formatEuro(base.max)}</span>
                     <PersonNet amount={base.max} guests={capacity} earlyBooking={earlyBooking} />
-                    <ChannelLines amount={base.max} optima={optima} booking={booking} guests={capacity} from2026={from2026} />
+                    <ChannelLines amount={base.max} optima={optima} booking={booking} guests={capacity} />
                   </td>
                   <td className={numCell}>{formatEuro(baseBand)}</td>
                   <td className={cn(bodyCell, "text-right")}>
@@ -1930,7 +1922,7 @@ function CompareCard({
                       </span>
                     ) : null}
                     <PersonNet amount={next.min} guests={capacity} earlyBooking={earlyBooking} />
-                    <ChannelLines amount={next.min} optima={optima} booking={booking} guests={capacity} from2026={from2026} />
+                    <ChannelLines amount={next.min} optima={optima} booking={booking} guests={capacity} />
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <EuroInput
@@ -1941,7 +1933,7 @@ function CompareCard({
                       onChange={(max) => onChange(period.id, { ...next, max })}
                     />
                     <PersonNet amount={next.max} guests={capacity} earlyBooking={earlyBooking} />
-                    <ChannelLines amount={next.max} optima={optima} booking={booking} guests={capacity} from2026={from2026} />
+                    <ChannelLines amount={next.max} optima={optima} booking={booking} guests={capacity} />
                   </td>
                   <td className={numCell}>{formatEuro(nextBand)}</td>
                   <td className={numCell}>

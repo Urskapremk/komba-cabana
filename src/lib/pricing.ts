@@ -1218,21 +1218,6 @@ export function afterDiscounts(
   return { agency, early, left };
 }
 
-/** Povprečje min in max iz leta 2026 ter Booking od tega povprečja. */
-export function bookingAverageFrom2026(
-  min: number | null,
-  max: number | null,
-  percent: number | null,
-): { average: number; booking: number } | null {
-  if (percent == null) return null;
-  const values = [min, max].filter((value): value is number => value != null);
-  if (values.length === 0) return null;
-  const average = Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
-  const booking = discountShare(average, percent);
-  if (booking == null) return null;
-  return { average, booking };
-}
-
 /** Min ali max minus Optima Plus minus Booking. Oba odbitka sta od te cene. */
 export function afterChannels(
   amount: number | null,
