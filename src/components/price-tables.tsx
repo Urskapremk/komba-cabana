@@ -26,8 +26,10 @@ import {
   beachWeb2027FromFamily,
   childPrices,
   childStaySentence,
+  extraBedDiscountSentence,
   extraBedLabel,
   extraBedSentence,
+  extraBedStay,
   singleExtraBedSentence,
   familyChildLabel,
   familyGallerySentence,
@@ -750,7 +752,7 @@ export function PriceTables() {
             Beach Villi. Pri Bungalow I - Family sta v tabeli ceni za 2 osebi in 1 osebo, zraven pa otroka v galeriji.
               Ena odrasla oseba v galeriji plača polovico cene za 2 osebi. Če sta v galeriji dva odrasla, vpišeš odstotek popusta od cene za 2 osebi. V letu 2027 se vpisujeta samo ti dve ceni.
             Beach Villa IV ima ceno za 2 gosta in za 1 osebo ter dve dodatni ležišči. Na ležišču je lahko otrok ali odrasla oseba. Če sta v bungalovu še dva odrasla, vpišeš odstotek popusta.
-            Bungalov III ima eno dodatno ležišče. Odrasla oseba ali otrok se računata enako kot v galeriji pri Bungalowu I.
+            Bungalov III ima eno dodatno ležišče. Odrasla oseba ali otrok se računata enako kot v galeriji pri Bungalowu I. Odstotek zniža ceno odrasle osebe na tem ležišču.
             Pri ceni je kljukica: označi jo, ko je cena pripravljena. Zelena pomeni pravilno.
             Dokler dviga ni, ima Beach Villa za 2 in 1 osebo ceno 2027 kot Bungalow I - Family. Dodatni ležišči se računata iz cene za 2 osebi.
             Prazniki
@@ -1018,6 +1020,22 @@ function WebCompareCard({
           najprej bungalov, spodaj ista računica na osebo.
         </p>
       </div>
+      {oneExtraBed ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#d7e3d4] bg-[#f4f7f2] px-4 py-2">
+          <p className="text-sm text-[#243528]">
+            <span className="font-medium">Dodatno ležišče</span>
+            <span className="ml-2">odstotek zniža ceno odrasle osebe</span>
+          </p>
+          <PercentLift
+            label="Dodatno ležišče, odstotek"
+            value={galleryPair}
+            onApply={onGalleryPair}
+            action="Izračunaj"
+            parse={parseCommission}
+          />
+          <ExtraBedSummary current={current} next={next} percent={galleryPair} />
+        </div>
+      ) : null}
       {family || extraBeds ? (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#d7e3d4] bg-[#f4f7f2] px-4 py-2">
           <p className="text-sm text-[#243528]">
@@ -1147,8 +1165,9 @@ function WebCompareCard({
                       <PerPerson amount={amount} guests={count} commission={commission} earlyBooking={earlyBooking} />
                       {(family || extraBeds || oneExtraBed) && count === 2 ? (
                         <>
-                          <GalleryStay twoPerson={amount} place={adultPlace} pairPercent={pairForBeds} />
+                          <GalleryStay twoPerson={amount} place={adultPlace} pairPercent={oneExtraBed ? galleryPair : pairForBeds} singleBed={oneExtraBed} />
                           {family || extraBeds ? <GalleryPairLine setPrice={amount} percent={galleryPair} /> : null}
+                          {oneExtraBed ? <ExtraBedLine twoPerson={amount} percent={galleryPair} /> : null}
                         </>
                       ) : null}
                     </td>
@@ -1156,7 +1175,7 @@ function WebCompareCard({
                 })}
                 {childGuests.map((count) => (
                   <td key={`web-child-${count}`} className={cn(bodyCell, "align-top text-right")}>
-                    <GalleryStay twoPerson={currentTwo} place={adultPlace} pairPercent={pairForBeds} />
+                    <GalleryStay twoPerson={currentTwo} place={adultPlace} pairPercent={oneExtraBed ? galleryPair : pairForBeds} singleBed={oneExtraBed} />
                   </td>
                 ))}
                 {nextPriceGuests.map((count) => {
@@ -1188,7 +1207,10 @@ function WebCompareCard({
                       ) : null}
                       {(family || extraBeds || oneExtraBed) && count === 2 ? (
                         <>
-                          <GalleryStay twoPerson={yearGallery} place={adultPlace} pairPercent={pairForBeds} fromCurrent={nextTwo == null && currentTwo != null} />
+                          <GalleryStay twoPerson={yearGallery} place={adultPlace} pairPercent={oneExtraBed ? galleryPair : pairForBeds} singleBed={oneExtraBed} fromCurrent={nextTwo == null && currentTwo != null} />
+                          {oneExtraBed ? (
+                            <ExtraBedLine twoPerson={yearGallery} percent={galleryPair} fromCurrent={nextTwo == null && currentTwo != null} />
+                          ) : null}
                           {family || extraBeds ? (
                             <GalleryPairLine
                               setPrice={nextTwo == null ? yearGallery : nextTwo}
@@ -1203,7 +1225,7 @@ function WebCompareCard({
                 })}
                 {nextChildGuests.map((count) => (
                   <td key={`next-child-${count}`} className={cn(bodyCell, "align-top text-right")}>
-                    <GalleryStay twoPerson={yearGallery} place={adultPlace} pairPercent={pairForBeds} fromCurrent={nextTwo == null && currentTwo != null} />
+                    <GalleryStay twoPerson={yearGallery} place={adultPlace} pairPercent={oneExtraBed ? galleryPair : pairForBeds} singleBed={oneExtraBed} fromCurrent={nextTwo == null && currentTwo != null} />
                   </td>
                 ))}
               </tr>
@@ -1357,28 +1379,90 @@ function GalleryPairLine({
   );
 }
 
+function ExtraBedSummary({
+  current,
+  next,
+  percent,
+}: {
+  current: PersonRates[string];
+  next: PersonRates[string];
+  percent: number | null;
+}) {
+  if (percent == null) {
+    return (
+      <p className="w-full text-xs leading-relaxed text-[#243528]">
+        Prazno polje pomeni, da popusta še ni. Odstotek zniža ceno odrasle osebe na dodatnem ležišču.
+      </p>
+    );
+  }
+  return (
+    <div className="flex w-full flex-col gap-0.5 text-xs leading-relaxed text-[#243528]">
+      {PERSON_SEASONS.map((season) => {
+        const currentTwo = current[season.id]?.[2] ?? null;
+        const nextTwo = next[season.id]?.[2] ?? null;
+        const webLine = extraBedDiscountSentence(currentTwo, percent);
+        const yearLine = extraBedDiscountSentence(familyGalleryTwoPerson(currentTwo, nextTwo, true), percent);
+        return (
+          <p key={season.id}>
+            <span className="font-medium">{season.label}</span>
+            {webLine ? <span className="ml-2">WEB {webLine}</span> : null}
+            {nextTwo != null && yearLine ? (
+              <span className="ml-2">2027 {yearLine}</span>
+            ) : (
+              <span className="ml-2">2027 uporablja trenutno ceno WEB</span>
+            )}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function ExtraBedLine({
+  twoPerson,
+  percent,
+  fromCurrent,
+}: {
+  twoPerson: number | null;
+  percent: number | null;
+  fromCurrent?: boolean;
+}) {
+  const line = extraBedDiscountSentence(twoPerson, percent);
+  if (!line) return null;
+  return (
+    <span className="mt-1 block text-right text-[11px] leading-snug text-[#1c1915]">
+      {fromCurrent ? <span className="block text-muted-foreground">2027 uporablja trenutno ceno WEB</span> : null}
+      <span className="block">{line}</span>
+    </span>
+  );
+}
+
 function GalleryStay({
   twoPerson,
   fromCurrent,
   place = "v galeriji",
   pairPercent = null,
+  singleBed = false,
 }: {
   twoPerson: number | null;
   fromCurrent?: boolean;
   place?: string;
   pairPercent?: number | null;
+  singleBed?: boolean;
 }) {
   const single = galleryAdultPrice(twoPerson);
   if (single == null) return <span className="mt-1 block text-xs text-muted-foreground">—</span>;
-  const pair = galleryPairStay(twoPerson, pairPercent);
-  const adult = pair?.each ?? single;
+  const bed = singleBed ? extraBedStay(twoPerson, pairPercent) : null;
+  const pair = singleBed ? null : galleryPairStay(twoPerson, pairPercent);
+  const adult = bed?.amount ?? pair?.each ?? single;
+  const percent = bed?.percent ?? pair?.percent;
   const bands = childPrices(single);
   return (
     <span className="mt-1 block border-t border-[#e4d8c4] pt-1 text-right text-[11px] leading-snug text-muted-foreground">
       {fromCurrent ? <span className="block">iz trenutnega WEB</span> : null}
       <span className="block font-medium text-[#1c1915]">
         odrasla oseba {place} {formatEuro(adult)}
-        {pair ? <span className="font-normal"> (−{formatPercent(pair.percent)})</span> : null}
+        {percent != null ? <span className="font-normal"> (−{formatPercent(percent)})</span> : null}
       </span>
       {bands.map((band) => (
         <span key={band.id} className="mt-0.5 block">

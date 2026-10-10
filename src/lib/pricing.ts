@@ -1052,7 +1052,28 @@ export function extraBedSentence(): string {
 }
 
 export function singleExtraBedSentence(): string {
-  return "Eno dodatno ležišče je za otroka ali odraslo osebo. Ena odrasla oseba na dodatnem ležišču plača polovico cene za 2 osebi. Otrok: 0–5 let bivanje brezplačno, 5–10 let −50 %, 10–15 let −20 % od cene ene odrasle osebe.";
+  return "Eno dodatno ležišče je za otroka ali odraslo osebo. Ena odrasla oseba na dodatnem ležišču plača polovico cene za 2 osebi. Odstotek zniža to ceno odrasle osebe. Otrok: 0–5 let bivanje brezplačno, 5–10 let −50 %, 10–15 let −20 % od cene ene odrasle osebe, brez tega odstotka.";
+}
+
+export type ExtraBedStay = {
+  base: number;
+  percent: number;
+  amount: number;
+};
+
+/** Odstotek zniža ceno ene odrasle osebe na dodatnem ležišču. Brez odstotka popusta ni. */
+export function extraBedStay(twoPerson: number | null, percent: number | null): ExtraBedStay | null {
+  const base = galleryAdultPrice(twoPerson);
+  if (base == null || percent == null || !Number.isFinite(base) || !Number.isFinite(percent)) return null;
+  if (base < 0 || percent < 0 || percent > 100) return null;
+  const amount = Math.max(0, Math.round((base * (100 - percent)) / 100));
+  return { base, percent, amount };
+}
+
+export function extraBedDiscountSentence(twoPerson: number | null, percent: number | null): string | null {
+  const stay = extraBedStay(twoPerson, percent);
+  if (!stay) return null;
+  return `${formatEuro(stay.base)} − ${formatPercent(stay.percent)} = ${formatEuro(stay.amount)}`;
 }
 
 export function familyGallerySentence(): string {
