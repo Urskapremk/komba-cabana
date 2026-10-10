@@ -759,7 +759,7 @@ export function PriceTables() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Trenutna cena in leto 2027 sta v isti vrstici. Pod ceno bungalova je preračun na osebo, cena za odraslo osebo.
-            Minimalna cena 2027 je {PERSON_FLOOR_2027} € na osebo.             Provizijo agencije in Early booking vpišeš v odstotkih. Pod ceno na osebo piše, koliko ostane.
+            Minimalna cena 2027 je {PERSON_FLOOR_2027} € na osebo. Provizijo agencije vpišeš pri fiksnih cenah WEB. Early booking vpišeš v odstotkih. Pod ceno na osebo piše, koliko ostane.
             Pri 2027 vpišeš odstotek in dvigneš cene tega bungalova od trenutnega WEB, tudi pri
             Beach Villi. Pri Bungalow I - Family sta v tabeli ceni za 2 osebi in 1 osebo, zraven pa otroka v galeriji.
               Ena odrasla oseba v galeriji plača polovico cene za 2 osebi. Če sta v galeriji dva odrasla, vpišeš odstotek popusta od cene za 2 osebi. V letu 2027 se vpisujeta samo ti dve ceni.
@@ -854,7 +854,6 @@ export function PriceTables() {
                     prices={prices[card.id]}
                     summary={shiftSentence(card.id, prices)}
                     capacity={card.capacity}
-                    commission={commission[card.id] ?? null}
                     earlyBooking={earlyBooking[card.id] ?? null}
                     onChange={(periodId, next) => setPrice(card.id, periodId, next)}
                     onReset={() => resetUnit(card.id)}
@@ -867,7 +866,6 @@ export function PriceTables() {
                   <BeachCard
                     prices={prices["beach-4"]}
                     capacity={card.capacity}
-                    commission={commission[card.id] ?? null}
                     earlyBooking={earlyBooking[card.id] ?? null}
                     onChange={(periodId, next) => setPrice("beach-4", periodId, next)}
                     onReset={() => resetUnit("beach-4")}
@@ -1582,20 +1580,18 @@ function DiscountLines({
 function PersonNet({
   amount,
   guests,
-  commission,
   earlyBooking,
 }: {
   amount: number | null;
   guests: number;
-  commission: number | null;
   earlyBooking: number | null;
 }) {
-  if (commission == null && earlyBooking == null) return null;
+  if (earlyBooking == null) return null;
   const each = pricePerPerson(amount, guests);
   if (each == null) return null;
   return (
     <span className="mt-0.5 block text-right text-[11px] leading-tight text-muted-foreground">
-      <DiscountLines amount={each} commission={commission} earlyBooking={earlyBooking} who="na osebo" />
+      <DiscountLines amount={each} commission={null} earlyBooking={earlyBooking} who="na osebo" />
     </span>
   );
 }
@@ -1690,7 +1686,6 @@ function CompareCard({
   prices,
   summary,
   capacity,
-  commission,
   earlyBooking,
   onChange,
   onReset,
@@ -1705,7 +1700,6 @@ function CompareCard({
   prices: Record<string, Money>;
   summary: string;
   capacity: number;
-  commission: number | null;
   earlyBooking: number | null;
   onChange: (periodId: string, next: Money) => void;
   onReset: () => void;
@@ -1808,11 +1802,11 @@ function CompareCard({
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <span className="tabular-nums whitespace-nowrap">{formatEuro(base.min)}</span>
-                    <PersonNet amount={base.min} guests={capacity} commission={commission} earlyBooking={earlyBooking} />
+                    <PersonNet amount={base.min} guests={capacity} earlyBooking={earlyBooking} />
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <span className="tabular-nums whitespace-nowrap">{formatEuro(base.max)}</span>
-                    <PersonNet amount={base.max} guests={capacity} commission={commission} earlyBooking={earlyBooking} />
+                    <PersonNet amount={base.max} guests={capacity} earlyBooking={earlyBooking} />
                   </td>
                   <td className={numCell}>{formatEuro(baseBand)}</td>
                   <td className={cn(bodyCell, "text-right")}>
@@ -1828,7 +1822,7 @@ function CompareCard({
                         pod {floor.amount} €, {floor.label}
                       </span>
                     ) : null}
-                    <PersonNet amount={next.min} guests={capacity} commission={commission} earlyBooking={earlyBooking} />
+                    <PersonNet amount={next.min} guests={capacity} earlyBooking={earlyBooking} />
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <EuroInput
@@ -1838,7 +1832,7 @@ function CompareCard({
                       onToggleCheck={() => onToggleCheck(priceCheckKey("var", unitId, period.id, "max"))}
                       onChange={(max) => onChange(period.id, { ...next, max })}
                     />
-                    <PersonNet amount={next.max} guests={capacity} commission={commission} earlyBooking={earlyBooking} />
+                    <PersonNet amount={next.max} guests={capacity} earlyBooking={earlyBooking} />
                   </td>
                   <td className={numCell}>{formatEuro(nextBand)}</td>
                   <td className={numCell}>
@@ -1889,7 +1883,6 @@ function PeriodDates({ period }: { period: (typeof COMPARE_PERIODS)[number] }) {
 function BeachCard({
   prices,
   capacity,
-  commission,
   earlyBooking,
   onChange,
   onReset,
@@ -1900,7 +1893,6 @@ function BeachCard({
 }: {
   prices: Record<string, Money>;
   capacity: number;
-  commission: number | null;
   earlyBooking: number | null;
   onChange: (periodId: string, next: Money) => void;
   onReset: () => void;
@@ -1972,7 +1964,7 @@ function BeachCard({
                       onToggleCheck={() => onToggleCheck(priceCheckKey("var", "beach-4", period.id, "min"))}
                       onChange={(min) => onChange(period.id, { ...price, min })}
                     />
-                    <PersonNet amount={price.min} guests={capacity} commission={commission} earlyBooking={earlyBooking} />
+                    <PersonNet amount={price.min} guests={capacity} earlyBooking={earlyBooking} />
                   </td>
                   <td className={cn(bodyCell, "text-right")}>
                     <EuroInput
@@ -1983,7 +1975,7 @@ function BeachCard({
                       onToggleCheck={() => onToggleCheck(priceCheckKey("var", "beach-4", period.id, "max"))}
                       onChange={(max) => onChange(period.id, { ...price, max })}
                     />
-                    <PersonNet amount={price.max} guests={capacity} commission={commission} earlyBooking={earlyBooking} />
+                    <PersonNet amount={price.max} guests={capacity} earlyBooking={earlyBooking} />
                   </td>
                   <td className={numCell}>
                     {gap ? (
