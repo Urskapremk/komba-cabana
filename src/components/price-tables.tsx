@@ -673,7 +673,7 @@ export function PriceTables() {
               <p className="text-xs font-medium tracking-[0.22em] text-primary uppercase">Komba Cabana</p>
               <h1 className="font-heading mt-2 text-4xl tracking-tight md:text-5xl">Kalkulacije cen</h1>
               <Link href="/predlog" className="mt-3 inline-block text-sm text-primary underline-offset-4 hover:underline">
-                Predlogi videza
+                Predlog v stilu POS
               </Link>
             </div>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
