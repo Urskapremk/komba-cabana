@@ -596,6 +596,11 @@ export function sanitizeCommission(input: unknown): WebLift | null {
   return readPercentMap(input, 0, 100);
 }
 
+/** Popust za dva odrasla v galeriji, od 0 do 100. Manjkajoče polje ni 20. */
+export function sanitizeGalleryPair(input: unknown): WebLift | null {
+  return readPercentMap(input, 0, 100);
+}
+
 export type SavedCenik = {
   prices: Prices;
   offers: Offers;
@@ -604,6 +609,8 @@ export type SavedCenik = {
   webLift: WebLift;
   commission: WebLift;
   earlyBooking: WebLift;
+  /** Odstotek popusta, če sta v galeriji dva odrasla. Manjka pomeni, da popusta še ni. */
+  galleryPair: WebLift;
   lodgeOccupancy: number;
   savedAt?: number;
 };
@@ -625,6 +632,7 @@ export function readCenik(input: unknown): SavedCenik | null {
     webLift?: unknown;
     commission?: unknown;
     earlyBooking?: unknown;
+    galleryPair?: unknown;
     lodgeOccupancy?: unknown;
     savedAt?: unknown;
   };
@@ -636,7 +644,10 @@ export function readCenik(input: unknown): SavedCenik | null {
   const webLift = sanitizeWebLift(envelope.webLift);
   const commission = sanitizeCommission(envelope.commission);
   const earlyBooking = sanitizeCommission(envelope.earlyBooking);
-  if (!prices && !offers && !personRates && !web2027 && !webLift && !commission && !earlyBooking) return null;
+  const galleryPair = sanitizeGalleryPair(envelope.galleryPair);
+  if (!prices && !offers && !personRates && !web2027 && !webLift && !commission && !earlyBooking && !galleryPair) {
+    return null;
+  }
   const savedAt = sanitizeSavedAt(envelope.savedAt);
   return {
     prices: prices ?? clonePrices(),
@@ -646,6 +657,7 @@ export function readCenik(input: unknown): SavedCenik | null {
     webLift: webLift ?? emptyWebLift(),
     commission: commission ?? emptyWebLift(),
     earlyBooking: earlyBooking ?? emptyWebLift(),
+    galleryPair: galleryPair ?? emptyWebLift(),
     lodgeOccupancy: sanitizeLodgeOccupancy(envelope.lodgeOccupancy),
     ...(savedAt ? { savedAt } : {}),
   };
@@ -687,6 +699,7 @@ export function cenikEntryScore(cenik: SavedCenik): number {
     if (amountOrNull(cenik.webLift[card.id]) != null) score += 1;
     if (amountOrNull(cenik.commission[card.id]) != null) score += 1;
     if (amountOrNull(cenik.earlyBooking[card.id]) != null) score += 1;
+    if (amountOrNull(cenik.galleryPair?.[card.id]) != null) score += 1;
   }
   if (cenik.lodgeOccupancy !== 100) score += 1;
   return score;
@@ -734,6 +747,9 @@ export function cenikDropsEntries(existing: SavedCenik, incoming: SavedCenik): b
     if (dropsAmount(amountOrNull(existing.earlyBooking[card.id]), amountOrNull(incoming.earlyBooking[card.id]), null)) {
       return true;
     }
+    if (dropsAmount(amountOrNull(existing.galleryPair?.[card.id]), amountOrNull(incoming.galleryPair?.[card.id]), null)) {
+      return true;
+    }
   }
   return dropsAmount(existing.lodgeOccupancy, incoming.lodgeOccupancy, 100);
 }
@@ -758,6 +774,7 @@ export function mergeCenik(primary: SavedCenik, fallback: SavedCenik): SavedCeni
   const defaults = defaultPersonRates();
   const priceDefaults = clonePrices();
   const next = structuredClone(primary);
+  next.galleryPair = { ...emptyWebLift(), ...next.galleryPair };
   for (const bungalow of BUNGALOWS) {
     for (const period of PERIODS) {
       const base = priceDefaults[bungalow.id][period.id];
@@ -801,6 +818,11 @@ export function mergeCenik(primary: SavedCenik, fallback: SavedCenik): SavedCeni
       amountOrNull(fallback.earlyBooking[card.id]),
       null,
     );
+    next.galleryPair[card.id] = pickAmount(
+      amountOrNull(primary.galleryPair?.[card.id]),
+      amountOrNull(fallback.galleryPair?.[card.id]),
+      null,
+    );
   }
   next.lodgeOccupancy = pickAmount(primary.lodgeOccupancy, fallback.lodgeOccupancy, 100) ?? 100;
   const savedAt = Math.max(primary.savedAt ?? 0, fallback.savedAt ?? 0);
@@ -836,6 +858,7 @@ export function preferCenik(local: SavedCenik | null, server: SavedCenik | null)
  */
 export function rebaseCenik(base: SavedCenik, baseline: SavedCenik, edited: SavedCenik): SavedCenik {
   const next = structuredClone(base);
+  next.galleryPair = { ...emptyWebLift(), ...next.galleryPair };
   const beachMirrorOnly =
     amountOrNull(baseline.webLift["beach-4"]) == null && amountOrNull(edited.webLift["beach-4"]) == null;
   for (const bungalow of BUNGALOWS) {
@@ -870,6 +893,9 @@ export function rebaseCenik(base: SavedCenik, baseline: SavedCenik, edited: Save
     }
     if (amountOrNull(baseline.earlyBooking[card.id]) !== amountOrNull(edited.earlyBooking[card.id])) {
       next.earlyBooking[card.id] = amountOrNull(edited.earlyBooking[card.id]);
+    }
+    if (amountOrNull(baseline.galleryPair?.[card.id]) !== amountOrNull(edited.galleryPair?.[card.id])) {
+      next.galleryPair[card.id] = amountOrNull(edited.galleryPair?.[card.id]);
     }
   }
   if (baseline.lodgeOccupancy !== edited.lodgeOccupancy) next.lodgeOccupancy = edited.lodgeOccupancy;
@@ -981,7 +1007,34 @@ export function familyChildLabel(count: number): string {
 }
 
 export function familyGallerySentence(): string {
-  return "V galeriji spijo otroci. Odrasla oseba v galeriji plača polovico cene za 2 osebi. Otrok: 0–5 let bivanje brezplačno, 5–10 let −50 %, 10–15 let −20 % od te cene.";
+  return "V galeriji spijo otroci. Ena odrasla oseba v galeriji plača polovico cene za 2 osebi. Če sta v galeriji dva odrasla, vpišeš odstotek popusta od cene za 2 osebi. Otrok: 0–5 let bivanje brezplačno, 5–10 let −50 %, 10–15 let −20 % od cene ene odrasle osebe.";
+}
+
+export type GalleryPairStay = {
+  setPrice: number;
+  percent: number;
+  together: number;
+  each: number;
+};
+
+/**
+ * Dva odrasla v galeriji plačata nastavljeno ceno za 2 osebi, znižano za vpisani odstotek.
+ * Skupaj je zaokroženo na evro in nikoli pod 0. Vsak plača polovico tega, spet na evro.
+ * Brez odstotka popusta ni. Ena odrasla oseba in otroci tega odstotka ne dobijo.
+ */
+export function galleryPairStay(setPrice: number | null, percent: number | null): GalleryPairStay | null {
+  if (setPrice == null || percent == null || !Number.isFinite(setPrice) || !Number.isFinite(percent)) return null;
+  if (setPrice < 0 || percent < 0 || percent > 100) return null;
+  const together = Math.max(0, Math.round((setPrice * (100 - percent)) / 100));
+  const each = Math.max(0, Math.round(together / 2));
+  return { setPrice, percent, together, each };
+}
+
+/** Nastavljena cena minus popust = ostanek za oba, in cena na osebo. */
+export function galleryPairSentence(setPrice: number | null, percent: number | null): string | null {
+  const stay = galleryPairStay(setPrice, percent);
+  if (!stay) return null;
+  return `${formatEuro(stay.setPrice)} − ${formatPercent(stay.percent)} = ${formatEuro(stay.together)} za oba, ${formatEuro(stay.each)} na osebo`;
 }
 
 export function childStaySentence(): string {

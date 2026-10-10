@@ -17,6 +17,8 @@ import {
   resolvedSegments,
   PERSON_RATE_CARDS,
   PERSON_SEASONS,
+  formatEuro,
+  formatPercent,
   formatSeasonRange,
   emptyOffers,
   guestCounts,
@@ -25,6 +27,8 @@ import {
   familyChildLabel,
   familyGalleryTwoPerson,
   galleryAdultPrice,
+  galleryPairSentence,
+  galleryPairStay,
   PERSON_FLOOR_2027,
   belowPersonFloor2027,
   pricePerPerson,
@@ -403,6 +407,56 @@ describe("cene po osebah", () => {
     assert.equal(childPrices(galleryAdultPrice(560)!)[2].amount, 224);
     assert.equal(winter[1].amount === childPrices(pricePerPerson(560, 4)!)[1].amount, false);
     assert.equal(winter[2].amount === childPrices(pricePerPerson(490, 3)!)[2].amount, false);
+  });
+
+  it("dva odrasla v galeriji dobita vpisani odstotek od cene za 2 osebi", () => {
+    const stay = galleryPairStay(420, 20);
+    assert.ok(stay);
+    assert.equal(stay.together, 336);
+    assert.equal(stay.each, 168);
+    assert.equal(stay.setPrice, 420);
+    const line = galleryPairSentence(420, 20);
+    assert.equal(line, `${formatEuro(420)} − ${formatPercent(20)} = ${formatEuro(336)} za oba, ${formatEuro(168)} na osebo`);
+    assert.match(line ?? "", /za oba/);
+    assert.match(line ?? "", /na osebo/);
+    assert.equal(galleryAdultPrice(420), 210);
+    assert.deepEqual(
+      childPrices(210).map((band) => band.amount),
+      [0, 105, 168],
+    );
+    assert.equal(galleryPairStay(420, 0)?.together, 420);
+    assert.equal(galleryPairStay(420, 0)?.each, 210);
+    assert.equal(galleryPairStay(420, 100)?.together, 0);
+    assert.equal(galleryPairStay(420, 100)?.each, 0);
+    assert.equal(parseCommission("101"), null);
+    assert.equal(parseCommission("-1"), null);
+    assert.equal(parseCommission(""), null);
+    assert.equal(parseCommission("20,5"), 20.5);
+    assert.equal(parseCommission("20.5"), 20.5);
+    assert.equal(galleryPairStay(420, 101), null);
+    assert.equal(galleryPairStay(420, -5), null);
+    assert.equal(galleryPairStay(420, null), null);
+    assert.equal(galleryPairStay(null, 20), null);
+    assert.equal(galleryPairSentence(420, null), null);
+    const missing = readCenik({ personRates: { "ocean-1": { zima: { "2": 420 } } } });
+    assert.ok(missing);
+    assert.equal(missing.galleryPair["ocean-1"], null);
+    assert.equal(missing.galleryPair["ocean-2"], null);
+    assert.equal(missing.galleryPair["garden-3"], null);
+    assert.equal(missing.galleryPair["beach-4"], null);
+    assert.notEqual(missing.galleryPair["ocean-1"], 20);
+    const stored = readCenik({ galleryPair: { "ocean-1": 20, "ocean-2": 150, "beach-4": 0, "garden-3": -3 } });
+    assert.equal(stored?.galleryPair["ocean-1"], 20);
+    assert.equal(stored?.galleryPair["ocean-2"], null);
+    assert.equal(stored?.galleryPair["beach-4"], 0);
+    assert.equal(stored?.galleryPair["garden-3"], null);
+    const older = readCenik({ galleryPair: { "ocean-1": 20 }, savedAt: 3 });
+    const newer = readCenik({ web2027: { "ocean-1": { zima: { "2": 350 } } }, savedAt: 4 });
+    assert.ok(older);
+    assert.ok(newer);
+    assert.equal(cenikDropsEntries(older, newer), true);
+    assert.equal(preferCenik(newer, older)?.galleryPair["ocean-1"], 20);
+    assert.equal(preferCenik(newer, older)?.web2027["ocean-1"].zima[2], 350);
   });
 
   it("obdobja kanala se stikajo, julij 9.–13. je v dveh sezonah", () => {

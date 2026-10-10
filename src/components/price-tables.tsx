@@ -30,6 +30,7 @@ import {
   familyGallerySentence,
   familyGalleryTwoPerson,
   galleryAdultPrice,
+  galleryPairSentence,
   clonePrices,
   datesDiffer,
   defaultPersonRates,
@@ -107,6 +108,7 @@ function mirrorBeach(cenik: Cenik): Cenik {
     webLift,
     commission: cenik.commission ?? emptyWebLift(),
     earlyBooking: cenik.earlyBooking ?? emptyWebLift(),
+    galleryPair: cenik.galleryPair ?? emptyWebLift(),
     web2027: {
       ...cenik.web2027,
       "beach-4": beachLifted
@@ -125,6 +127,7 @@ function blankCenik(): Cenik {
     webLift: emptyWebLift(),
     commission: emptyWebLift(),
     earlyBooking: emptyWebLift(),
+    galleryPair: emptyWebLift(),
     lodgeOccupancy: 100,
   };
 }
@@ -233,6 +236,7 @@ function savedEnvelope(next: Cenik) {
     webLift: synced.webLift ?? emptyWebLift(),
     commission: synced.commission ?? emptyWebLift(),
     earlyBooking: synced.earlyBooking ?? emptyWebLift(),
+    galleryPair: synced.galleryPair ?? emptyWebLift(),
     lodgeOccupancy: synced.lodgeOccupancy,
     ...(synced.savedAt ? { savedAt: synced.savedAt } : {}),
   };
@@ -267,6 +271,7 @@ export function PriceTables() {
   const webLift = cenik.webLift ?? emptyWebLift();
   const commission = cenik.commission ?? emptyWebLift();
   const earlyBooking = cenik.earlyBooking ?? emptyWebLift();
+  const galleryPair = cenik.galleryPair ?? emptyWebLift();
   const prices = cenik.prices;
   const edited = useRef(false);
   const ready = useRef(false);
@@ -502,6 +507,14 @@ export function PriceTables() {
     });
   }
 
+  function setGalleryPair(unitId: string, percent: number) {
+    const current = cenikRef.current;
+    commit({
+      ...current,
+      galleryPair: { ...(current.galleryPair ?? emptyWebLift()), [unitId]: percent },
+    });
+  }
+
   function liftWeb2027(unitId: string, percent: number) {
     const current = cenikRef.current;
     const lifted = liftPersonUnit(unitId, current.personRates[unitId], percent);
@@ -639,7 +652,7 @@ export function PriceTables() {
             Minimalna cena 2027 je {PERSON_FLOOR_2027} € na osebo.             Provizijo agencije in Early booking vpišeš v odstotkih. Pod ceno na osebo piše, koliko ostane.
             Pri 2027 vpišeš odstotek in dvigneš cene tega bungalova od trenutnega WEB, tudi pri
             Beach Villi. Pri Bungalow I - Family sta v tabeli ceni za 2 osebi in 1 osebo, zraven pa otroka v galeriji.
-            Odrasla oseba v galeriji plača polovico cene za 2 osebi. V letu 2027 se vpisujeta samo ti dve ceni.
+            Ena odrasla oseba v galeriji plača polovico cene za 2 osebi. Če sta v galeriji dva odrasla, vpišeš odstotek popusta od cene za 2 osebi. V letu 2027 se vpisujeta samo ti dve ceni.
             Dokler dviga ni, ima Beach Villa za 2 in 1 osebo ceno 2027 kot Bungalow I - Family, za 3 in 4 pa njegov trenutni WEB.
             Prazniki
             2027 trajajo do 10. 1. 2028. Zimski december 2026 pri variabilnih cenah traja do 18. 12.,
@@ -677,8 +690,10 @@ export function PriceTables() {
                   lift={webLift[card.id] ?? null}
                   commission={commission[card.id] ?? null}
                   earlyBooking={earlyBooking[card.id] ?? null}
+                  galleryPair={galleryPair[card.id] ?? null}
                   onCommission={(percent) => setCommission(card.id, percent)}
                   onEarlyBooking={(percent) => setEarlyBooking(card.id, percent)}
+                  onGalleryPair={(percent) => setGalleryPair(card.id, percent)}
                   onChangeCurrent={(seasonId, guests, amount) => setPersonRate(card.id, seasonId, guests, amount)}
                   onChangeNext={(seasonId, guests, amount) => setWeb2027(card.id, seasonId, guests, amount)}
                   onResetCurrent={() => resetPersonRate(card.id)}
@@ -744,8 +759,10 @@ function WebCompareCard({
   lift,
   commission,
   earlyBooking,
+  galleryPair,
   onCommission,
   onEarlyBooking,
+  onGalleryPair,
   onChangeCurrent,
   onChangeNext,
   onResetCurrent,
@@ -760,8 +777,10 @@ function WebCompareCard({
   lift: number | null;
   commission: number | null;
   earlyBooking: number | null;
+  galleryPair: number | null;
   onCommission: (percent: number) => void;
   onEarlyBooking: (percent: number) => void;
+  onGalleryPair: (percent: number) => void;
   onChangeCurrent: (seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
   onChangeNext: (seasonId: PersonSeasonId, guests: number, amount: number | null) => void;
   onResetCurrent: () => void;
@@ -855,6 +874,22 @@ function WebCompareCard({
           najprej bungalov, spodaj ista računica na osebo.
         </p>
       </div>
+      {family ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#d7e3d4] bg-[#f4f7f2] px-4 py-2">
+          <p className="text-sm text-[#243528]">
+            <span className="font-medium">Dva odrasla v galeriji</span>
+            <span className="ml-2">popust od nastavljene cene za 2 osebi</span>
+          </p>
+          <PercentLift
+            label="Dva odrasla v galeriji"
+            value={galleryPair}
+            onApply={onGalleryPair}
+            action="Izračunaj"
+            parse={parseCommission}
+          />
+          <GalleryPairSummary current={current} next={next} percent={galleryPair} />
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#e4d8c4] bg-[#f3e6c8] px-4 py-2">
         <p className="text-sm text-[#3f3424]">
           <span className="font-medium">2027</span>
@@ -960,7 +995,12 @@ function WebCompareCard({
                         />
                       ) : null}
                       <PerPerson amount={amount} guests={count} commission={commission} earlyBooking={earlyBooking} />
-                      {family && count === 2 ? <GalleryStay twoPerson={amount} /> : null}
+                      {family && count === 2 ? (
+                        <>
+                          <GalleryStay twoPerson={amount} />
+                          <GalleryPairLine setPrice={amount} percent={galleryPair} />
+                        </>
+                      ) : null}
                     </td>
                   );
                 })}
@@ -995,7 +1035,14 @@ function WebCompareCard({
                         </span>
                       ) : null}
                       {family && count === 2 ? (
-                        <GalleryStay twoPerson={yearGallery} fromCurrent={nextTwo == null && currentTwo != null} />
+                        <>
+                          <GalleryStay twoPerson={yearGallery} fromCurrent={nextTwo == null && currentTwo != null} />
+                          <GalleryPairLine
+                            setPrice={nextTwo == null ? yearGallery : nextTwo}
+                            percent={galleryPair}
+                            fromCurrent={nextTwo == null && currentTwo != null}
+                          />
+                        </>
                       ) : null}
                     </td>
                   );
@@ -1092,6 +1139,64 @@ function PercentLift({
 function percentText(value: number | null): string {
   if (value === null) return "";
   return new Intl.NumberFormat("sl-SI", { maximumFractionDigits: 1 }).format(value);
+}
+
+function GalleryPairSummary({
+  current,
+  next,
+  percent,
+}: {
+  current: PersonRates[string];
+  next: PersonRates[string];
+  percent: number | null;
+}) {
+  if (percent == null) {
+    return (
+      <p className="w-full text-xs leading-relaxed text-[#243528]">
+        Prazno polje pomeni, da popusta še ni. Popust velja samo, kadar sta v galeriji oba odrasla.
+      </p>
+    );
+  }
+  return (
+    <div className="flex w-full flex-col gap-0.5 text-xs leading-relaxed text-[#243528]">
+      {PERSON_SEASONS.map((season) => {
+        const currentTwo = current[season.id]?.[2] ?? null;
+        const nextTwo = next[season.id]?.[2] ?? null;
+        const webLine = galleryPairSentence(currentTwo, percent);
+        const yearLine = galleryPairSentence(familyGalleryTwoPerson(currentTwo, nextTwo, true), percent);
+        return (
+          <p key={season.id}>
+            <span className="font-medium">{season.label}</span>
+            {webLine ? <span className="ml-2">WEB {webLine}</span> : null}
+            {nextTwo != null && yearLine ? (
+              <span className="ml-2">2027 {yearLine}</span>
+            ) : (
+              <span className="ml-2">2027 uporablja trenutno ceno WEB</span>
+            )}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function GalleryPairLine({
+  setPrice,
+  percent,
+  fromCurrent,
+}: {
+  setPrice: number | null;
+  percent: number | null;
+  fromCurrent?: boolean;
+}) {
+  const line = galleryPairSentence(setPrice, percent);
+  if (!line) return null;
+  return (
+    <span className="mt-1 block text-right text-[11px] leading-snug text-[#1c1915]">
+      {fromCurrent ? <span className="block text-muted-foreground">2027 uporablja trenutno ceno WEB</span> : null}
+      <span className="block">{line}</span>
+    </span>
+  );
 }
 
 function GalleryStay({ twoPerson, fromCurrent }: { twoPerson: number | null; fromCurrent?: boolean }) {
