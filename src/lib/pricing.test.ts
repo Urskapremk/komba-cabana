@@ -459,6 +459,19 @@ describe("cene po osebah", () => {
     assert.equal(preferCenik(newer, older)?.web2027["ocean-1"].zima[2], 350);
   });
 
+  it("zelena kljukica pri ceni ostane in se da odznačiti", () => {
+    const key = "2027|ocean-1|zima|2";
+    const stored = readCenik({ checks: { [key]: true, "web|ocean-1|zima|9": true, "slabo": true } });
+    assert.ok(stored);
+    assert.equal(stored.checks[key], true);
+    assert.equal(stored.checks["web|ocean-1|zima|9"], undefined);
+    assert.equal(stored.checks.slabo, undefined);
+    const marked = readCenik({ checks: { [key]: true }, savedAt: 2 });
+    const cleared = readCenik({ checks: { [key]: false }, web2027: { "ocean-1": { zima: { "2": 350 } } }, savedAt: 3 });
+    assert.equal(preferCenik(cleared, marked)?.checks[key], false);
+    assert.equal(preferCenik(cleared, marked)?.web2027["ocean-1"].zima[2], 350);
+  });
+
   it("obdobja kanala se stikajo, julij 9.–13. je v dveh sezonah", () => {
     const spring = PERSON_SEASONS.find((season) => season.id === "pomlad-jesen");
     const summer = PERSON_SEASONS.find((season) => season.id === "poletje-december");

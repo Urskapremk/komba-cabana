@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { ChevronDownIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { OccupancyView } from "@/components/occupancy-view";
 import { YearEarnings } from "@/components/year-earnings";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,9 @@ import {
   childStaySentence,
   familyChildLabel,
   familyGallerySentence,
+  priceCheckKey,
+  priceCheckOn,
+  type PriceChecks,
   familyGalleryTwoPerson,
   galleryAdultPrice,
   galleryPairSentence,
@@ -109,6 +112,7 @@ function mirrorBeach(cenik: Cenik): Cenik {
     commission: cenik.commission ?? emptyWebLift(),
     earlyBooking: cenik.earlyBooking ?? emptyWebLift(),
     galleryPair: cenik.galleryPair ?? emptyWebLift(),
+    checks: cenik.checks ?? {},
     web2027: {
       ...cenik.web2027,
       "beach-4": beachLifted
@@ -128,8 +132,29 @@ function blankCenik(): Cenik {
     commission: emptyWebLift(),
     earlyBooking: emptyWebLift(),
     galleryPair: emptyWebLift(),
+    checks: {},
     lodgeOccupancy: 100,
   };
+}
+
+function PriceCheck({ on, label, onToggle }: { on: boolean; label: string; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={`${label}, kljukica`}
+      aria-pressed={on}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onToggle}
+      className={cn(
+        "inline-flex size-5 shrink-0 items-center justify-center rounded-full border",
+        on
+          ? "border-[#1d6b45] bg-[#1d6b45] text-white"
+          : "border-[#cfc6b8] bg-white text-[#cfc6b8] hover:border-[#1d6b45] hover:text-[#1d6b45]",
+      )}
+    >
+      <CheckIcon className="size-3" strokeWidth={3} />
+    </button>
+  );
 }
 
 function EuroInput({
@@ -138,18 +163,24 @@ function EuroInput({
   label,
   pending,
   readOnly,
+  checked,
+  onToggleCheck,
 }: {
   value: number | null;
   onChange: (next: number | null) => void;
   label: string;
   pending?: boolean;
   readOnly?: boolean;
+  checked?: boolean;
+  onToggleCheck?: () => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const text = draft === null || readOnly ? (value === null ? "" : String(value)) : draft;
 
   return (
-    <div className="relative min-w-0">
+    <div className="flex items-center justify-end gap-1">
+      {onToggleCheck ? <PriceCheck on={checked === true} label={label} onToggle={onToggleCheck} /> : null}
+      <div className="relative min-w-0 flex-1">
       <Input
         aria-label={label}
         size={4}
@@ -176,6 +207,7 @@ function EuroInput({
       <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[11px] text-muted-foreground">
         €
       </span>
+      </div>
     </div>
   );
 }
@@ -235,7 +267,18 @@ function bungalowSlice(source: Cenik, unitId: string) {
     commission: source.commission?.[unitId] ?? null,
     earlyBooking: source.earlyBooking?.[unitId] ?? null,
     galleryPair: source.galleryPair?.[unitId] ?? null,
+    checks: checksForUnit(source.checks, unitId),
   });
+}
+
+function checksForUnit(checks: PriceChecks | undefined, unitId: string): PriceChecks {
+  const next: PriceChecks = {};
+  for (const [key, value] of Object.entries(checks ?? {})) {
+    if (key.startsWith(`web|${unitId}|`) || key.startsWith(`2027|${unitId}|`) || key.startsWith(`var|${unitId}|`)) {
+      next[key] = value;
+    }
+  }
+  return next;
 }
 
 function savedEnvelope(next: Cenik) {
@@ -249,6 +292,7 @@ function savedEnvelope(next: Cenik) {
     commission: synced.commission ?? emptyWebLift(),
     earlyBooking: synced.earlyBooking ?? emptyWebLift(),
     galleryPair: synced.galleryPair ?? emptyWebLift(),
+    checks: synced.checks ?? {},
     lodgeOccupancy: synced.lodgeOccupancy,
     ...(synced.savedAt ? { savedAt: synced.savedAt } : {}),
   };
@@ -435,6 +479,14 @@ export function PriceTables() {
     };
   }, [publish]);
 
+  function toggleCheck(key: string) {
+    const current = cenikRef.current;
+    commit({
+      ...current,
+      checks: { ...(current.checks ?? {}), [key]: current.checks?.[key] !== true },
+    });
+  }
+
   function saveBungalow(unitId: string) {
     commit(cenikRef.current);
     const saved = cenikRef.current;
@@ -448,8 +500,13 @@ export function PriceTables() {
 
   function setPrice(unitId: string, periodId: string, next: Money) {
     const current = cenikRef.current;
+    const prev = current.prices[unitId][periodId];
+    const checks = { ...(current.checks ?? {}) };
+    if (prev.min !== next.min) checks[priceCheckKey("var", unitId, periodId, "min")] = false;
+    if (prev.max !== next.max) checks[priceCheckKey("var", unitId, periodId, "max")] = false;
     commit({
       ...current,
+      checks,
       prices: {
         ...current.prices,
         [unitId]: { ...current.prices[unitId], [periodId]: next },
@@ -471,8 +528,10 @@ export function PriceTables() {
   function setPersonRate(unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) {
     const current = cenikRef.current;
     const row = current.personRates[unitId][seasonId];
+    const key = priceCheckKey("web", unitId, seasonId, String(guests));
     commit({
       ...current,
+      checks: row[guests] === amount ? current.checks : { ...(current.checks ?? {}), [key]: false },
       personRates: {
         ...current.personRates,
         [unitId]: {
@@ -494,8 +553,10 @@ export function PriceTables() {
   function setWeb2027(unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) {
     const current = cenikRef.current;
     const row = current.web2027[unitId][seasonId];
+    const key = priceCheckKey("2027", unitId, seasonId, String(guests));
     commit({
       ...current,
+      checks: row[guests] === amount ? current.checks : { ...(current.checks ?? {}), [key]: false },
       web2027: {
         ...current.web2027,
         [unitId]: {
@@ -676,7 +737,8 @@ export function PriceTables() {
             Minimalna cena 2027 je {PERSON_FLOOR_2027} € na osebo.             Provizijo agencije in Early booking vpišeš v odstotkih. Pod ceno na osebo piše, koliko ostane.
             Pri 2027 vpišeš odstotek in dvigneš cene tega bungalova od trenutnega WEB, tudi pri
             Beach Villi. Pri Bungalow I - Family sta v tabeli ceni za 2 osebi in 1 osebo, zraven pa otroka v galeriji.
-            Ena odrasla oseba v galeriji plača polovico cene za 2 osebi. Če sta v galeriji dva odrasla, vpišeš odstotek popusta od cene za 2 osebi. V letu 2027 se vpisujeta samo ti dve ceni.
+              Ena odrasla oseba v galeriji plača polovico cene za 2 osebi. Če sta v galeriji dva odrasla, vpišeš odstotek popusta od cene za 2 osebi. V letu 2027 se vpisujeta samo ti dve ceni.
+            Pri ceni je kljukica: označi jo, ko je cena pripravljena. Zelena pomeni pravilno.
             Dokler dviga ni, ima Beach Villa za 2 in 1 osebo ceno 2027 kot Bungalow I - Family, za 3 in 4 pa njegov trenutni WEB.
             Prazniki
             2027 trajajo do 10. 1. 2028. Zimski december 2026 pri variabilnih cenah traja do 18. 12.,
@@ -723,6 +785,8 @@ export function PriceTables() {
                   onResetCurrent={() => resetPersonRate(card.id)}
                   onResetNext={() => resetWeb2027(card.id)}
                   onLift={(percent) => liftWeb2027(card.id, percent)}
+                  checks={cenik.checks ?? {}}
+                  onToggleCheck={toggleCheck}
                   fixed={fixedSlice[card.id] === bungalowSlice(cenik, card.id)}
                   onSave={() => saveBungalow(card.id)}
                 />
@@ -751,6 +815,8 @@ export function PriceTables() {
                     earlyBooking={earlyBooking[card.id] ?? null}
                     onChange={(periodId, next) => setPrice(card.id, periodId, next)}
                     onReset={() => resetUnit(card.id)}
+                    checks={cenik.checks ?? {}}
+                    onToggleCheck={toggleCheck}
                   />
                 ) : (
                   <BeachCard
@@ -760,6 +826,8 @@ export function PriceTables() {
                     earlyBooking={earlyBooking[card.id] ?? null}
                     onChange={(periodId, next) => setPrice("beach-4", periodId, next)}
                     onReset={() => resetUnit("beach-4")}
+                    checks={cenik.checks ?? {}}
+                    onToggleCheck={toggleCheck}
                   />
                 )}
               </div>
@@ -794,6 +862,8 @@ function WebCompareCard({
   onResetCurrent,
   onResetNext,
   onLift,
+  checks,
+  onToggleCheck,
   fixed,
   onSave,
 }: {
@@ -814,6 +884,8 @@ function WebCompareCard({
   onResetCurrent: () => void;
   onResetNext: () => void;
   onLift: (percent: number) => void;
+  checks: PriceChecks;
+  onToggleCheck: (key: string) => void;
   fixed: boolean;
   onSave: () => void;
 }) {
@@ -1017,6 +1089,8 @@ function WebCompareCard({
                       <EuroInput
                         label={`${card.name}, WEB, ${season.label}, ${guestLabel(count)}`}
                         value={amount}
+                        checked={priceCheckOn(checks, priceCheckKey("web", unitId, season.id, String(count)))}
+                        onToggleCheck={() => onToggleCheck(priceCheckKey("web", unitId, season.id, String(count)))}
                         onChange={(value) => onChangeCurrent(season.id, count, value)}
                       />
                       {amount != null ? (
@@ -1051,6 +1125,8 @@ function WebCompareCard({
                         value={amount}
                         pending={amount == null && !(linkedToFamily && lift == null)}
                         readOnly={linkedToFamily && lift == null}
+                        checked={priceCheckOn(checks, priceCheckKey("2027", unitId, season.id, String(count)))}
+                        onToggleCheck={() => onToggleCheck(priceCheckKey("2027", unitId, season.id, String(count)))}
                         onChange={(value) => onChangeNext(season.id, count, value)}
                       />
                       {amount != null ? (
@@ -1443,6 +1519,8 @@ function CompareCard({
   earlyBooking,
   onChange,
   onReset,
+  checks,
+  onToggleCheck,
 }: {
   unitId: string;
   name: string;
@@ -1454,6 +1532,8 @@ function CompareCard({
   earlyBooking: number | null;
   onChange: (periodId: string, next: Money) => void;
   onReset: () => void;
+  checks: PriceChecks;
+  onToggleCheck: (key: string) => void;
 }) {
   const changed = PERIODS.some((period) => !sameMoney(prices[period.id], OPTIMA_PRICES[unitId][period.id]));
 
@@ -1547,6 +1627,8 @@ function CompareCard({
                     <EuroInput
                       label={`${name}, ${SEASON_LABEL[period.season]} od ${period.from2027}, min 2027`}
                       value={next.min}
+                      checked={priceCheckOn(checks, priceCheckKey("var", unitId, period.id, "min"))}
+                      onToggleCheck={() => onToggleCheck(priceCheckKey("var", unitId, period.id, "min"))}
                       onChange={(min) => onChange(period.id, { ...next, min })}
                     />
                     {underFloor ? (
@@ -1560,6 +1642,8 @@ function CompareCard({
                     <EuroInput
                       label={`${name}, ${SEASON_LABEL[period.season]} od ${period.from2027}, max 2027`}
                       value={next.max}
+                      checked={priceCheckOn(checks, priceCheckKey("var", unitId, period.id, "max"))}
+                      onToggleCheck={() => onToggleCheck(priceCheckKey("var", unitId, period.id, "max"))}
                       onChange={(max) => onChange(period.id, { ...next, max })}
                     />
                     <PersonNet amount={next.max} guests={capacity} commission={commission} earlyBooking={earlyBooking} />
@@ -1617,6 +1701,8 @@ function BeachCard({
   earlyBooking,
   onChange,
   onReset,
+  checks,
+  onToggleCheck,
 }: {
   prices: Record<string, Money>;
   capacity: number;
@@ -1624,6 +1710,8 @@ function BeachCard({
   earlyBooking: number | null;
   onChange: (periodId: string, next: Money) => void;
   onReset: () => void;
+  checks: PriceChecks;
+  onToggleCheck: (key: string) => void;
 }) {
   const changed = PERIODS.some((period) => !sameMoney(prices[period.id], OPTIMA_PRICES["beach-4"][period.id]));
 
@@ -1671,6 +1759,8 @@ function BeachCard({
                       label={`Beach Villa, ${SEASON_LABEL[period.season]} od ${period.from2027}, min`}
                       value={price.min}
                       pending={pending}
+                      checked={priceCheckOn(checks, priceCheckKey("var", "beach-4", period.id, "min"))}
+                      onToggleCheck={() => onToggleCheck(priceCheckKey("var", "beach-4", period.id, "min"))}
                       onChange={(min) => onChange(period.id, { ...price, min })}
                     />
                     <PersonNet amount={price.min} guests={capacity} commission={commission} earlyBooking={earlyBooking} />
@@ -1680,6 +1770,8 @@ function BeachCard({
                       label={`Beach Villa, ${SEASON_LABEL[period.season]} od ${period.from2027}, max`}
                       value={price.max}
                       pending={pending}
+                      checked={priceCheckOn(checks, priceCheckKey("var", "beach-4", period.id, "max"))}
+                      onToggleCheck={() => onToggleCheck(priceCheckKey("var", "beach-4", period.id, "max"))}
                       onChange={(max) => onChange(period.id, { ...price, max })}
                     />
                     <PersonNet amount={price.max} guests={capacity} commission={commission} earlyBooking={earlyBooking} />

@@ -601,6 +601,29 @@ export function sanitizeGalleryPair(input: unknown): WebLift | null {
   return readPercentMap(input, 0, 100);
 }
 
+/** Kljukica pri ceni, ki je pripravljena. Ključ je obseg, bungalov, obdobje in polje. */
+export type PriceChecks = Record<string, boolean>;
+
+const PRICE_CHECK_KEY = /^(?:web|2027)\|[a-z0-9-]+\|[a-z0-9-]+\|[1-4]$|^var\|[a-z0-9-]+\|[a-z0-9-]+\|(?:min|max)$/;
+
+export function priceCheckKey(scope: "web" | "2027" | "var", unitId: string, slot: string, field: string): string {
+  return `${scope}|${unitId}|${slot}|${field}`;
+}
+
+export function sanitizePriceChecks(input: unknown): PriceChecks {
+  if (!input || typeof input !== "object") return {};
+  const next: PriceChecks = {};
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    if (!PRICE_CHECK_KEY.test(key) || typeof value !== "boolean") continue;
+    next[key] = value;
+  }
+  return next;
+}
+
+export function priceCheckOn(checks: PriceChecks | undefined, key: string): boolean {
+  return checks?.[key] === true;
+}
+
 export type SavedCenik = {
   prices: Prices;
   offers: Offers;
@@ -611,6 +634,8 @@ export type SavedCenik = {
   earlyBooking: WebLift;
   /** Odstotek popusta, če sta v galeriji dva odrasla. Manjka pomeni, da popusta še ni. */
   galleryPair: WebLift;
+  /** Zelena kljukica pri ceni. False pomeni, da je bila odznačena. */
+  checks: PriceChecks;
   lodgeOccupancy: number;
   savedAt?: number;
 };
@@ -633,6 +658,7 @@ export function readCenik(input: unknown): SavedCenik | null {
     commission?: unknown;
     earlyBooking?: unknown;
     galleryPair?: unknown;
+    checks?: unknown;
     lodgeOccupancy?: unknown;
     savedAt?: unknown;
   };
@@ -645,7 +671,9 @@ export function readCenik(input: unknown): SavedCenik | null {
   const commission = sanitizeCommission(envelope.commission);
   const earlyBooking = sanitizeCommission(envelope.earlyBooking);
   const galleryPair = sanitizeGalleryPair(envelope.galleryPair);
-  if (!prices && !offers && !personRates && !web2027 && !webLift && !commission && !earlyBooking && !galleryPair) {
+  const checks = sanitizePriceChecks(envelope.checks);
+  const hasCheck = Object.values(checks).some(Boolean);
+  if (!prices && !offers && !personRates && !web2027 && !webLift && !commission && !earlyBooking && !galleryPair && !hasCheck) {
     return null;
   }
   const savedAt = sanitizeSavedAt(envelope.savedAt);
@@ -658,6 +686,7 @@ export function readCenik(input: unknown): SavedCenik | null {
     commission: commission ?? emptyWebLift(),
     earlyBooking: earlyBooking ?? emptyWebLift(),
     galleryPair: galleryPair ?? emptyWebLift(),
+    checks,
     lodgeOccupancy: sanitizeLodgeOccupancy(envelope.lodgeOccupancy),
     ...(savedAt ? { savedAt } : {}),
   };
@@ -700,6 +729,9 @@ export function cenikEntryScore(cenik: SavedCenik): number {
     if (amountOrNull(cenik.commission[card.id]) != null) score += 1;
     if (amountOrNull(cenik.earlyBooking[card.id]) != null) score += 1;
     if (amountOrNull(cenik.galleryPair?.[card.id]) != null) score += 1;
+  }
+  for (const marked of Object.values(cenik.checks ?? {})) {
+    if (marked) score += 1;
   }
   if (cenik.lodgeOccupancy !== 100) score += 1;
   return score;
@@ -824,6 +856,7 @@ export function mergeCenik(primary: SavedCenik, fallback: SavedCenik): SavedCeni
       null,
     );
   }
+  next.checks = { ...(fallback.checks ?? {}), ...(primary.checks ?? {}) };
   next.lodgeOccupancy = pickAmount(primary.lodgeOccupancy, fallback.lodgeOccupancy, 100) ?? 100;
   const savedAt = Math.max(primary.savedAt ?? 0, fallback.savedAt ?? 0);
   if (savedAt > 0) next.savedAt = savedAt;
@@ -859,6 +892,7 @@ export function preferCenik(local: SavedCenik | null, server: SavedCenik | null)
 export function rebaseCenik(base: SavedCenik, baseline: SavedCenik, edited: SavedCenik): SavedCenik {
   const next = structuredClone(base);
   next.galleryPair = { ...emptyWebLift(), ...next.galleryPair };
+  next.checks = { ...(base.checks ?? {}) };
   const beachMirrorOnly =
     amountOrNull(baseline.webLift["beach-4"]) == null && amountOrNull(edited.webLift["beach-4"]) == null;
   for (const bungalow of BUNGALOWS) {
@@ -899,6 +933,9 @@ export function rebaseCenik(base: SavedCenik, baseline: SavedCenik, edited: Save
     }
   }
   if (baseline.lodgeOccupancy !== edited.lodgeOccupancy) next.lodgeOccupancy = edited.lodgeOccupancy;
+  if (stableCenik({ checks: baseline.checks ?? {} }) !== stableCenik({ checks: edited.checks ?? {} })) {
+    next.checks = { ...(edited.checks ?? {}) };
+  }
   const savedAt = Math.max(edited.savedAt ?? 0, base.savedAt ?? 0);
   if (savedAt > 0) next.savedAt = savedAt;
   else delete next.savedAt;
