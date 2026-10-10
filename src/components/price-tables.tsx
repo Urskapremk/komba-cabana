@@ -91,6 +91,18 @@ const SEASON_SOFT: Record<string, string> = {
   "poletje-december": "bg-[#f8e0c0]",
 };
 
+const BORDO = "#7a1f33";
+
+function yearFrame(sides: { left?: boolean; right?: boolean; top?: boolean; bottom?: boolean }) {
+  const line = `3px solid ${BORDO}`;
+  return {
+    ...(sides.left ? { borderLeft: line } : {}),
+    ...(sides.right ? { borderRight: line } : {}),
+    ...(sides.top ? { borderTop: line } : {}),
+    ...(sides.bottom ? { borderBottom: line } : {}),
+  };
+}
+
 function subscribeStore(onChange: () => void) {
   window.addEventListener("storage", onChange);
   return () => window.removeEventListener("storage", onChange);
@@ -1052,8 +1064,8 @@ function WebCompareCard({
           <GalleryPairSummary current={current} next={next} percent={galleryPair} extraBeds={extraBeds} />
         </div>
       ) : null}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#e4d8c4] bg-[#f3e6c8] px-4 py-2">
-        <p className="text-sm text-[#3f3424]">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#7a1f33] bg-[#7a1f33] px-4 py-2 text-[#f8efe6]">
+        <p className="text-sm">
           <span className="font-medium">2027</span>
           <span className="ml-2">
             {linkedToFamily && lift == null
@@ -1096,10 +1108,11 @@ function WebCompareCard({
               </th>
               <th
                 colSpan={nextPriceGuests.length + nextChildGuests.length}
-                className={cn(headCell, "bg-[#f3e6c8] text-center")}
+                className={cn(headCell, "bg-[#7a1f33] text-center text-[#f8efe6]")}
+                style={yearFrame({ left: true, right: true, top: true })}
               >
                 2027
-                <span className="mt-0.5 block text-[10px] font-normal tracking-normal normal-case">
+                <span className="mt-0.5 block text-[10px] font-normal tracking-normal text-[#f8efe6]/80 normal-case">
                   {family ? "2 in 1 oseba, otroka izračunana · " : extraBeds ? "2 in 1 oseba, dodatni ležišči izračunani · " : oneExtraBed ? "2 in 1 oseba, dodatno ležišče izračunano · " : ""}
                   min. {PERSON_FLOOR_2027} € na osebo
                 </span>
@@ -1116,23 +1129,35 @@ function WebCompareCard({
                   {bedLabel(count)}
                 </th>
               ))}
-              {nextPriceGuests.map((count) => (
-                <th key={`next-${count}`} className={cn(headCell, "bg-[#f3e6c8] text-right")}>
+              {nextPriceGuests.map((count, index) => (
+                <th
+                  key={`next-${count}`}
+                  className={cn(headCell, "bg-[#7a1f33] text-right text-[#f8efe6]")}
+                  style={yearFrame({
+                    left: index === 0,
+                    right: nextChildGuests.length === 0 && index === nextPriceGuests.length - 1,
+                  })}
+                >
                   {guestLabel(count)}
                 </th>
               ))}
-              {nextChildGuests.map((count) => (
-                <th key={`next-child-${count}`} className={cn(headCell, "bg-[#f3e6c8] text-right")}>
+              {nextChildGuests.map((count, index) => (
+                <th
+                  key={`next-child-${count}`}
+                  className={cn(headCell, "bg-[#7a1f33] text-right text-[#f8efe6]")}
+                  style={yearFrame({ right: index === nextChildGuests.length - 1 })}
+                >
                   {bedLabel(count)}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {PERSON_SEASONS.map((season) => {
+            {PERSON_SEASONS.map((season, seasonIndex) => {
               const currentTwo = current[season.id]?.[2] ?? null;
               const nextTwo = next[season.id]?.[2] ?? null;
               const yearGallery = familyGalleryTwoPerson(currentTwo, nextTwo, true);
+              const lastSeason = seasonIndex === PERSON_SEASONS.length - 1;
               return (
               <tr key={season.id} className={SEASON_SOFT[season.id]}>
                 <td className={cn(bodyCell, "align-top text-left")}>
@@ -1173,10 +1198,18 @@ function WebCompareCard({
                     {family || extraBeds ? <GalleryPairLine setPrice={currentTwo} percent={galleryPair} /> : null}
                   </td>
                 ))}
-                {nextPriceGuests.map((count) => {
+                {nextPriceGuests.map((count, index) => {
                   const amount = next[season.id]?.[count] ?? null;
                   return (
-                    <td key={`next-${count}`} className={cn(bodyCell, "align-top text-right")}>
+                    <td
+                      key={`next-${count}`}
+                      className={cn(bodyCell, "align-top text-right")}
+                      style={yearFrame({
+                        left: index === 0,
+                        right: nextChildGuests.length === 0 && index === nextPriceGuests.length - 1,
+                        bottom: lastSeason,
+                      })}
+                    >
                       <EuroInput
                         label={`${card.name}, 2027, ${season.label}, ${guestLabel(count)}`}
                         value={amount}
@@ -1203,8 +1236,12 @@ function WebCompareCard({
                     </td>
                   );
                 })}
-                {nextChildGuests.map((count) => (
-                  <td key={`next-child-${count}`} className={cn(bodyCell, "align-top text-right")}>
+                {nextChildGuests.map((count, index) => (
+                  <td
+                    key={`next-child-${count}`}
+                    className={cn(bodyCell, "align-top text-right")}
+                    style={yearFrame({ right: index === nextChildGuests.length - 1, bottom: lastSeason })}
+                  >
                     <GalleryStay twoPerson={yearGallery} place={adultPlace} pairPercent={oneExtraBed ? galleryPair : pairForBeds} singleBed={oneExtraBed} fromCurrent={nextTwo == null && currentTwo != null} />
                     {oneExtraBed ? (
                       <ExtraBedLine twoPerson={yearGallery} percent={galleryPair} fromCurrent={nextTwo == null && currentTwo != null} />
