@@ -226,6 +226,18 @@ function shiftSentence(unitId: string, prices: Prices): string {
   return `${minText} ${maxText}`;
 }
 
+function bungalowSlice(source: Cenik, unitId: string) {
+  return JSON.stringify({
+    prices: source.prices[unitId],
+    personRates: source.personRates[unitId],
+    web2027: source.web2027[unitId],
+    lift: source.webLift?.[unitId] ?? null,
+    commission: source.commission?.[unitId] ?? null,
+    earlyBooking: source.earlyBooking?.[unitId] ?? null,
+    galleryPair: source.galleryPair?.[unitId] ?? null,
+  });
+}
+
 function savedEnvelope(next: Cenik) {
   const synced = mirrorBeach(next);
   const payload: Cenik = {
@@ -281,6 +293,7 @@ export function PriceTables() {
   const writingRef = useRef(false);
   const timerRef = useRef<number | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [fixedSlice, setFixedSlice] = useState<Record<string, string>>({});
   const drainRef = useRef<() => Promise<void>>(async () => {});
   const drain = useCallback(async () => {
     if (!ready.current || writingRef.current) return;
@@ -421,6 +434,17 @@ export function PriceTables() {
       document.removeEventListener("visibilitychange", onHide);
     };
   }, [publish]);
+
+  function saveBungalow(unitId: string) {
+    commit(cenikRef.current);
+    const saved = cenikRef.current;
+    if (timerRef.current != null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    void drain();
+    setFixedSlice((prev) => ({ ...prev, [unitId]: bungalowSlice(saved, unitId) }));
+  }
 
   function setPrice(unitId: string, periodId: string, next: Money) {
     const current = cenikRef.current;
@@ -618,8 +642,8 @@ export function PriceTables() {
             <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
               Pri vsakem bungalovu so najprej fiksne cene WEB, pod njimi variabilne. Fiksne cene so na
               noč za spletno stran. Pri I, II in III je ista cena tudi na Bookingu, Airbnbju in Agodi.
-              Polni penzion ni vključen. Leto 2027 je v isti tabeli, desno od trenutnih cen. Vpis se shrani
-              na strežnik, zato ostane tudi, če se povezava do strani zamenja.
+              Polni penzion ni vključen. Leto 2027 je v isti tabeli, desno od trenutnih cen.               Pri vsakem bungalovu s gumbom Shrani fiksiraš cene. Vpis ostane na strežniku tudi, če se
+              povezava do strani zamenja.
             </p>
           ) : null}
         </div>
@@ -699,6 +723,8 @@ export function PriceTables() {
                   onResetCurrent={() => resetPersonRate(card.id)}
                   onResetNext={() => resetWeb2027(card.id)}
                   onLift={(percent) => liftWeb2027(card.id, percent)}
+                  fixed={fixedSlice[card.id] === bungalowSlice(cenik, card.id)}
+                  onSave={() => saveBungalow(card.id)}
                 />
               </div>
               {unitOpen(card.id) ? (
@@ -768,6 +794,8 @@ function WebCompareCard({
   onResetCurrent,
   onResetNext,
   onLift,
+  fixed,
+  onSave,
 }: {
   unitId: string;
   open: boolean;
@@ -786,6 +814,8 @@ function WebCompareCard({
   onResetCurrent: () => void;
   onResetNext: () => void;
   onLift: (percent: number) => void;
+  fixed: boolean;
+  onSave: () => void;
 }) {
   const card = personRateCard(unitId);
   if (!card || !current || !next) return null;
@@ -827,6 +857,9 @@ function WebCompareCard({
           </button>
         </h3>
         <div className="flex flex-wrap gap-2 py-3">
+          <Button size="sm" variant={fixed ? "secondary" : "default"} aria-label={`${card.name}, Shrani`} onClick={onSave}>
+            {fixed ? "Shranjeno" : "Shrani"}
+          </Button>
           <Button size="sm" variant="secondary" disabled={!currentChanged} onClick={onResetCurrent}>
             Ponastavi WEB
           </Button>
