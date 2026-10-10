@@ -596,9 +596,7 @@ export function sanitizeCommission(input: unknown): WebLift | null {
   return readPercentMap(input, 0, 100);
 }
 
-export function readCenik(
-  input: unknown,
-): {
+export type SavedCenik = {
   prices: Prices;
   offers: Offers;
   personRates: PersonRates;
@@ -607,7 +605,17 @@ export function readCenik(
   commission: WebLift;
   earlyBooking: WebLift;
   lodgeOccupancy: number;
-} | null {
+  savedAt?: number;
+};
+
+function sanitizeSavedAt(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 8_640_000_000_000_000) {
+    return undefined;
+  }
+  return value;
+}
+
+export function readCenik(input: unknown): SavedCenik | null {
   if (!input || typeof input !== "object") return null;
   const envelope = input as {
     prices?: unknown;
@@ -618,6 +626,7 @@ export function readCenik(
     commission?: unknown;
     earlyBooking?: unknown;
     lodgeOccupancy?: unknown;
+    savedAt?: unknown;
   };
   const pricesSource = "prices" in envelope ? envelope.prices : envelope;
   const prices = sanitizePrices(pricesSource);
@@ -628,6 +637,7 @@ export function readCenik(
   const commission = sanitizeCommission(envelope.commission);
   const earlyBooking = sanitizeCommission(envelope.earlyBooking);
   if (!prices && !offers && !personRates && !web2027 && !webLift && !commission && !earlyBooking) return null;
+  const savedAt = sanitizeSavedAt(envelope.savedAt);
   return {
     prices: prices ?? clonePrices(),
     offers: offers ?? emptyOffers(),
@@ -637,7 +647,250 @@ export function readCenik(
     commission: commission ?? emptyWebLift(),
     earlyBooking: earlyBooking ?? emptyWebLift(),
     lodgeOccupancy: sanitizeLodgeOccupancy(envelope.lodgeOccupancy),
+    ...(savedAt ? { savedAt } : {}),
   };
+}
+
+function amountOrNull(value: number | null | undefined): number | null {
+  return value ?? null;
+}
+
+function pickAmount(local: number | null, server: number | null, fallback: number | null): number | null {
+  if (local === fallback && server !== fallback) return server;
+  return local;
+}
+
+/** Koliko vpisanih vrednosti cenik nosi. Izhodišča in prazne celice ne štejejo. */
+export function cenikEntryScore(cenik: SavedCenik): number {
+  const defaults = defaultPersonRates();
+  const priceDefaults = clonePrices();
+  let score = 0;
+  for (const bungalow of BUNGALOWS) {
+    for (const period of PERIODS) {
+      const price = cenik.prices[bungalow.id][period.id];
+      const fallback = priceDefaults[bungalow.id][period.id];
+      if (price.min !== fallback.min) score += 1;
+      if (price.max !== fallback.max) score += 1;
+      for (const count of guestCounts(bungalow.id)) {
+        if (amountOrNull(cenik.offers[bungalow.id][period.id][count]) != null) score += 1;
+      }
+    }
+  }
+  for (const card of PERSON_RATE_CARDS) {
+    for (const season of PERSON_SEASONS) {
+      for (const count of personColumns(card.capacity)) {
+        const fallback = amountOrNull(defaults[card.id][season.id][count]);
+        if (amountOrNull(cenik.personRates[card.id][season.id][count]) !== fallback) score += 1;
+        if (amountOrNull(cenik.web2027[card.id][season.id][count]) != null) score += 1;
+      }
+    }
+    if (amountOrNull(cenik.webLift[card.id]) != null) score += 1;
+    if (amountOrNull(cenik.commission[card.id]) != null) score += 1;
+    if (amountOrNull(cenik.earlyBooking[card.id]) != null) score += 1;
+  }
+  if (cenik.lodgeOccupancy !== 100) score += 1;
+  return score;
+}
+
+export function cenikHasEntries(cenik: SavedCenik): boolean {
+  return cenikEntryScore(cenik) > 0;
+}
+
+function dropsAmount(before: number | null, after: number | null, fallback: number | null): boolean {
+  return before !== fallback && after === fallback;
+}
+
+/** True, ko bi `incoming` izbrisal vpis, ki ga `existing` že ima. */
+export function cenikDropsEntries(existing: SavedCenik, incoming: SavedCenik): boolean {
+  const defaults = defaultPersonRates();
+  const priceDefaults = clonePrices();
+  for (const bungalow of BUNGALOWS) {
+    for (const period of PERIODS) {
+      const before = existing.prices[bungalow.id][period.id];
+      const after = incoming.prices[bungalow.id][period.id];
+      const fallback = priceDefaults[bungalow.id][period.id];
+      if (dropsAmount(before.min, after.min, fallback.min) || dropsAmount(before.max, after.max, fallback.max)) return true;
+      for (const count of guestCounts(bungalow.id)) {
+        const beforeOffer = amountOrNull(existing.offers[bungalow.id][period.id][count]);
+        const afterOffer = amountOrNull(incoming.offers[bungalow.id][period.id][count]);
+        if (dropsAmount(beforeOffer, afterOffer, null)) return true;
+      }
+    }
+  }
+  for (const card of PERSON_RATE_CARDS) {
+    for (const season of PERSON_SEASONS) {
+      for (const count of personColumns(card.capacity)) {
+        const fallback = amountOrNull(defaults[card.id][season.id][count]);
+        const beforePerson = amountOrNull(existing.personRates[card.id][season.id][count]);
+        const afterPerson = amountOrNull(incoming.personRates[card.id][season.id][count]);
+        if (dropsAmount(beforePerson, afterPerson, fallback)) return true;
+        const beforeWeb = amountOrNull(existing.web2027[card.id][season.id][count]);
+        const afterWeb = amountOrNull(incoming.web2027[card.id][season.id][count]);
+        if (dropsAmount(beforeWeb, afterWeb, null)) return true;
+      }
+    }
+    if (dropsAmount(amountOrNull(existing.webLift[card.id]), amountOrNull(incoming.webLift[card.id]), null)) return true;
+    if (dropsAmount(amountOrNull(existing.commission[card.id]), amountOrNull(incoming.commission[card.id]), null)) return true;
+    if (dropsAmount(amountOrNull(existing.earlyBooking[card.id]), amountOrNull(incoming.earlyBooking[card.id]), null)) {
+      return true;
+    }
+  }
+  return dropsAmount(existing.lodgeOccupancy, incoming.lodgeOccupancy, 100);
+}
+
+function stableCenik(value: unknown): string {
+  if (value === undefined) return "null";
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
+  if (Array.isArray(value)) return `[${value.map((item) => stableCenik(item)).join(",")}]`;
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record)
+    .filter((key) => key !== "savedAt")
+    .sort();
+  return `{${keys.map((key) => `${JSON.stringify(key)}:${stableCenik(record[key])}`).join(",")}}`;
+}
+
+export function sameCenik(a: SavedCenik, b: SavedCenik): boolean {
+  return stableCenik(a) === stableCenik(b);
+}
+
+/** Ob združitvi zmaga `primary`, `fallback` zapolni samo prazne celice. */
+export function mergeCenik(primary: SavedCenik, fallback: SavedCenik): SavedCenik {
+  const defaults = defaultPersonRates();
+  const priceDefaults = clonePrices();
+  const next = structuredClone(primary);
+  for (const bungalow of BUNGALOWS) {
+    for (const period of PERIODS) {
+      const base = priceDefaults[bungalow.id][period.id];
+      next.prices[bungalow.id][period.id] = {
+        min: pickAmount(primary.prices[bungalow.id][period.id].min, fallback.prices[bungalow.id][period.id].min, base.min),
+        max: pickAmount(primary.prices[bungalow.id][period.id].max, fallback.prices[bungalow.id][period.id].max, base.max),
+      };
+      for (const count of guestCounts(bungalow.id)) {
+        next.offers[bungalow.id][period.id][count] = pickAmount(
+          amountOrNull(primary.offers[bungalow.id][period.id][count]),
+          amountOrNull(fallback.offers[bungalow.id][period.id][count]),
+          null,
+        );
+      }
+    }
+  }
+  for (const card of PERSON_RATE_CARDS) {
+    for (const season of PERSON_SEASONS) {
+      for (const count of personColumns(card.capacity)) {
+        const personFallback = amountOrNull(defaults[card.id][season.id][count]);
+        next.personRates[card.id][season.id][count] = pickAmount(
+          amountOrNull(primary.personRates[card.id][season.id][count]),
+          amountOrNull(fallback.personRates[card.id][season.id][count]),
+          personFallback,
+        );
+        next.web2027[card.id][season.id][count] = pickAmount(
+          amountOrNull(primary.web2027[card.id][season.id][count]),
+          amountOrNull(fallback.web2027[card.id][season.id][count]),
+          null,
+        );
+      }
+    }
+    next.webLift[card.id] = pickAmount(amountOrNull(primary.webLift[card.id]), amountOrNull(fallback.webLift[card.id]), null);
+    next.commission[card.id] = pickAmount(
+      amountOrNull(primary.commission[card.id]),
+      amountOrNull(fallback.commission[card.id]),
+      null,
+    );
+    next.earlyBooking[card.id] = pickAmount(
+      amountOrNull(primary.earlyBooking[card.id]),
+      amountOrNull(fallback.earlyBooking[card.id]),
+      null,
+    );
+  }
+  next.lodgeOccupancy = pickAmount(primary.lodgeOccupancy, fallback.lodgeOccupancy, 100) ?? 100;
+  const savedAt = Math.max(primary.savedAt ?? 0, fallback.savedAt ?? 0);
+  if (savedAt > 0) next.savedAt = savedAt;
+  else delete next.savedAt;
+  return next;
+}
+
+/**
+ * Izberi cenik, ki dejansko vsebuje vpis. Poln cenik ne sme zamenjati praznega,
+ * novejši pa ne sme izbrisati celic, ki jih sam nima.
+ */
+export function preferCenik(local: SavedCenik | null, server: SavedCenik | null): SavedCenik | null {
+  if (!local) return server;
+  if (!server) return local;
+  const localFilled = cenikHasEntries(local);
+  const serverFilled = cenikHasEntries(server);
+  if (localFilled !== serverFilled) return localFilled ? local : server;
+  const localAt = local.savedAt ?? 0;
+  const serverAt = server.savedAt ?? 0;
+  if (localAt !== serverAt) {
+    const newer = localAt > serverAt ? local : server;
+    const older = newer === local ? server : local;
+    if (cenikDropsEntries(older, newer)) return mergeCenik(newer, older);
+    return newer;
+  }
+  return mergeCenik(local, server);
+}
+
+/**
+ * Vpis med nalaganjem ostane. Razlika od izhodišča je njen vpis, ostalo pride iz strežnika.
+ * Beach 2027 se med ogledalom ne šteje za vpis, dokler dvig Beach ni shranjen.
+ */
+export function rebaseCenik(base: SavedCenik, baseline: SavedCenik, edited: SavedCenik): SavedCenik {
+  const next = structuredClone(base);
+  const beachMirrorOnly =
+    amountOrNull(baseline.webLift["beach-4"]) == null && amountOrNull(edited.webLift["beach-4"]) == null;
+  for (const bungalow of BUNGALOWS) {
+    for (const period of PERIODS) {
+      const before = baseline.prices[bungalow.id][period.id];
+      const after = edited.prices[bungalow.id][period.id];
+      if (!sameMoney(before, after)) next.prices[bungalow.id][period.id] = { ...after };
+      for (const count of guestCounts(bungalow.id)) {
+        const beforeOffer = amountOrNull(baseline.offers[bungalow.id][period.id][count]);
+        const afterOffer = amountOrNull(edited.offers[bungalow.id][period.id][count]);
+        if (beforeOffer !== afterOffer) next.offers[bungalow.id][period.id][count] = afterOffer;
+      }
+    }
+  }
+  for (const card of PERSON_RATE_CARDS) {
+    for (const season of PERSON_SEASONS) {
+      for (const count of personColumns(card.capacity)) {
+        const beforePerson = amountOrNull(baseline.personRates[card.id][season.id][count]);
+        const afterPerson = amountOrNull(edited.personRates[card.id][season.id][count]);
+        if (beforePerson !== afterPerson) next.personRates[card.id][season.id][count] = afterPerson;
+        if (beachMirrorOnly && card.id === "beach-4") continue;
+        const beforeWeb = amountOrNull(baseline.web2027[card.id][season.id][count]);
+        const afterWeb = amountOrNull(edited.web2027[card.id][season.id][count]);
+        if (beforeWeb !== afterWeb) next.web2027[card.id][season.id][count] = afterWeb;
+      }
+    }
+    if (amountOrNull(baseline.webLift[card.id]) !== amountOrNull(edited.webLift[card.id])) {
+      next.webLift[card.id] = amountOrNull(edited.webLift[card.id]);
+    }
+    if (amountOrNull(baseline.commission[card.id]) !== amountOrNull(edited.commission[card.id])) {
+      next.commission[card.id] = amountOrNull(edited.commission[card.id]);
+    }
+    if (amountOrNull(baseline.earlyBooking[card.id]) !== amountOrNull(edited.earlyBooking[card.id])) {
+      next.earlyBooking[card.id] = amountOrNull(edited.earlyBooking[card.id]);
+    }
+  }
+  if (baseline.lodgeOccupancy !== edited.lodgeOccupancy) next.lodgeOccupancy = edited.lodgeOccupancy;
+  const savedAt = Math.max(edited.savedAt ?? 0, base.savedAt ?? 0);
+  if (savedAt > 0) next.savedAt = savedAt;
+  else delete next.savedAt;
+  return next;
+}
+
+/**
+ * Zavrne prazen zapis čez polno datoteko, starejši čas in brisanje celic,
+ * dokler odjemalec ni prebral strežnika.
+ */
+export function acceptCenikWrite(existing: SavedCenik | null, incoming: SavedCenik, known = false): boolean {
+  if (!existing) return true;
+  const existingAt = existing.savedAt ?? 0;
+  const incomingAt = incoming.savedAt ?? 0;
+  if (incomingAt < existingAt) return false;
+  if (cenikHasEntries(existing) && !cenikHasEntries(incoming)) return false;
+  if (!known && cenikDropsEntries(existing, incoming)) return false;
+  return true;
 }
 
 /** Zasedenost Lodge, od 0 do 100. Manjkajoča vrednost pomeni polno zasedenost. */

@@ -284,6 +284,15 @@ function LodgePercent({ value, onApply }: { value: number; onApply: (percent: nu
           autoComplete="off"
           value={shown}
           onFocus={() => setDraft(new Intl.NumberFormat("sl-SI", { maximumFractionDigits: 1 }).format(value))}
+          onBlur={() => {
+            if (draft === null) return;
+            if (parsed === null || parsed === value) {
+              setDraft(null);
+              return;
+            }
+            onApply(parsed);
+            setDraft(null);
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();

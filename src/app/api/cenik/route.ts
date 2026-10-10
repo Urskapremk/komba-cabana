@@ -1,7 +1,7 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { connection } from "next/server";
-import { readCenik } from "@/lib/pricing";
+import { acceptCenikWrite, cenikHasEntries, readCenik } from "@/lib/pricing";
 
 const filePath = path.join(process.cwd(), "data", "cenik.json");
 
@@ -26,10 +26,23 @@ export async function PUT(request: Request) {
   } catch {
     return Response.json({ ok: false }, { status: 400 });
   }
-  const parsed = readCenik(body);
-  if (!parsed) return Response.json({ ok: false }, { status: 400 });
+  const incoming = readCenik(body);
+  if (!incoming) return Response.json({ ok: false }, { status: 400 });
   await connection();
+  const existing = await readSaved();
+  const known = request.headers.get("x-cenik-known") === "1";
+  if (!acceptCenikWrite(existing, incoming, known)) {
+    const empty = existing != null && cenikHasEntries(existing) && !cenikHasEntries(incoming);
+    return Response.json({ ok: false, reason: empty ? "prazno" : "staro" }, { status: 409 });
+  }
   await mkdir(path.dirname(filePath), { recursive: true });
-  await writeFile(filePath, JSON.stringify(parsed));
+  const temporary = `${filePath}.tmp`;
+  try {
+    await writeFile(temporary, JSON.stringify(incoming));
+    await rename(temporary, filePath);
+  } catch (error) {
+    await unlink(temporary).catch(() => undefined);
+    throw error;
+  }
   return Response.json({ ok: true });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ChevronDownIcon } from "lucide-react";
 import { OccupancyView } from "@/components/occupancy-view";
 import { YearEarnings } from "@/components/year-earnings";
@@ -19,11 +19,10 @@ import {
   type Money,
   PERSON_RATE_CARDS,
   PERSON_SEASONS,
-  type Offers,
   type PersonRates,
   type PersonSeasonId,
   type Prices,
-  type WebLift,
+  type SavedCenik,
   beachWeb2027FromFamily,
   childPrices,
   childStaySentence,
@@ -53,25 +52,28 @@ import {
   priceDelta,
   liftPersonUnit,
   afterDiscounts,
+  cenikHasEntries,
   parseCommission,
   parsePercent,
+  preferCenik,
   readCenik,
+  rebaseCenik,
+  sameCenik,
   sameMoney,
   spread,
 } from "@/lib/pricing";
 
 const STORAGE_KEY = "komba-cabana-cenik-v1";
 
-type Cenik = {
-  prices: Prices;
-  offers: Offers;
-  personRates: PersonRates;
-  web2027: PersonRates;
-  webLift: WebLift;
-  commission: WebLift;
-  earlyBooking: WebLift;
-  lodgeOccupancy: number;
-};
+type Cenik = SavedCenik;
+type SaveState = "idle" | "saving" | "saved" | "error";
+
+let lastStamp = 0;
+
+function nextStamp(previous?: number): number {
+  lastStamp = Math.max(Date.now(), (previous ?? 0) + 1, lastStamp + 1);
+  return lastStamp;
+}
 
 const SEASON_SOFT: Record<string, string> = {
   zima: "bg-[#f3f7f9]",
@@ -221,6 +223,42 @@ function shiftSentence(unitId: string, prices: Prices): string {
   return `${minText} ${maxText}`;
 }
 
+function savedEnvelope(next: Cenik) {
+  const synced = mirrorBeach(next);
+  const payload: Cenik = {
+    prices: next.prices,
+    offers: next.offers,
+    personRates: next.personRates,
+    web2027: synced.web2027,
+    webLift: synced.webLift ?? emptyWebLift(),
+    commission: synced.commission ?? emptyWebLift(),
+    earlyBooking: synced.earlyBooking ?? emptyWebLift(),
+    lodgeOccupancy: synced.lodgeOccupancy,
+    ...(synced.savedAt ? { savedAt: synced.savedAt } : {}),
+  };
+  return { synced, payload };
+}
+
+async function sendCenik(payload: Cenik, keepalive = false): Promise<"ok" | "empty" | "stale" | "error"> {
+  try {
+    const response = await fetch("/api/cenik", {
+      method: "PUT",
+      headers: { "content-type": "application/json", "x-cenik-known": "1" },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+      keepalive,
+    });
+    if (response.ok) return "ok";
+    if (response.status === 409) {
+      const body = (await response.json().catch(() => null)) as { reason?: string } | null;
+      return body?.reason === "prazno" ? "empty" : "stale";
+    }
+    return "error";
+  } catch {
+    return "error";
+  }
+}
+
 export function PriceTables() {
   const storedRaw = useSyncExternalStore(subscribeStore, readStore, () => null);
   const stored = useMemo(() => parseCenik(storedRaw), [storedRaw]);
@@ -231,96 +269,185 @@ export function PriceTables() {
   const earlyBooking = cenik.earlyBooking ?? emptyWebLift();
   const prices = cenik.prices;
   const edited = useRef(false);
-
-  function savedEnvelope(next: Cenik) {
-    const synced = mirrorBeach(next);
-    return {
-      synced,
-      payload: {
-        prices: next.prices,
-        offers: next.offers,
-        personRates: next.personRates,
-        web2027: synced.web2027,
-        webLift: synced.webLift ?? emptyWebLift(),
-        commission: synced.commission ?? emptyWebLift(),
-        earlyBooking: synced.earlyBooking ?? emptyWebLift(),
-        lodgeOccupancy: synced.lodgeOccupancy,
-      },
-    };
-  }
-
-  function commit(next: Cenik) {
-    edited.current = true;
-    const { synced, payload } = savedEnvelope(next);
-    setDraft(synced);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-    void fetch("/api/cenik", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-  }
-
-  useEffect(() => {
-    let cancel = false;
-    void (async () => {
-      try {
-        const response = await fetch("/api/cenik", { cache: "no-store" });
-        if (!response.ok || cancel || edited.current) return;
-        const body = (await response.json()) as { cenik?: unknown };
-        const parsed = body.cenik ? readCenik(body.cenik) : null;
-        if (cancel || edited.current) return;
-        if (parsed) {
-          const { synced, payload } = savedEnvelope(parsed);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-          setDraft(synced);
-          return;
+  const ready = useRef(false);
+  const cenikRef = useRef(cenik);
+  const latestRef = useRef<Cenik | null>(null);
+  const inflightRef = useRef<Cenik | null>(null);
+  const writingRef = useRef(false);
+  const timerRef = useRef<number | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const drainRef = useRef<() => Promise<void>>(async () => {});
+  const drain = useCallback(async () => {
+    if (!ready.current || writingRef.current) return;
+    writingRef.current = true;
+    setSaveState("saving");
+    let outcome: "none" | "ok" | "error" = "none";
+    try {
+      while (latestRef.current) {
+        const body = latestRef.current;
+        latestRef.current = null;
+        inflightRef.current = body;
+        let result = await sendCenik(body);
+        if (result === "error") {
+          await new Promise((resolve) => window.setTimeout(resolve, 400));
+          if (latestRef.current == null) result = await sendCenik(body);
         }
-        const localRaw = localStorage.getItem(STORAGE_KEY);
-        if (localRaw && parseCenik(localRaw)) {
-          await fetch("/api/cenik", {
-            method: "PUT",
-            headers: { "content-type": "application/json" },
-            body: localRaw,
-          });
-        }
-      } catch {
-        // Vpis v brskalniku ostane, tudi če strežnik ne odgovori.
+        inflightRef.current = null;
+        if (latestRef.current) continue;
+        outcome = result === "ok" ? "ok" : "error";
       }
-    })();
-    return () => {
-      cancel = true;
-    };
+    } finally {
+      writingRef.current = false;
+      if (latestRef.current) void drainRef.current();
+      else if (outcome === "ok") setSaveState("saved");
+      else if (outcome === "error") setSaveState("error");
+    }
   }, []);
 
+  useEffect(() => {
+    drainRef.current = drain;
+  }, [drain]);
+
+  const schedulePut = useCallback(
+    (payload: Cenik) => {
+      latestRef.current = payload;
+      if (!ready.current) return;
+      if (timerRef.current != null) window.clearTimeout(timerRef.current);
+      timerRef.current = window.setTimeout(() => {
+        timerRef.current = null;
+        void drain();
+      }, 200);
+    },
+    [drain],
+  );
+
+  const publish = useCallback(
+    (next: Cenik, upload: boolean) => {
+      const { synced, payload } = savedEnvelope(next);
+      cenikRef.current = synced;
+      setDraft(synced);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      if (upload && cenikHasEntries(payload)) schedulePut(payload);
+      else if (cenikHasEntries(payload)) setSaveState("saved");
+    },
+    [schedulePut],
+  );
+
+  const commit = useCallback(
+    (next: Cenik) => {
+      edited.current = true;
+      const stamped: Cenik = { ...next, savedAt: nextStamp(next.savedAt) };
+      const { synced, payload } = savedEnvelope(stamped);
+      cenikRef.current = synced;
+      setDraft(synced);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      setSaveState("saving");
+      schedulePut(payload);
+    },
+    [schedulePut],
+  );
+
+  useEffect(() => {
+    if (!edited.current) cenikRef.current = cenik;
+  }, [cenik]);
+
+  useEffect(() => {
+    const baseline = structuredClone(parseCenik(localStorage.getItem(STORAGE_KEY)) ?? cenikRef.current);
+    let cancel = false;
+
+    function flushKeepalive() {
+      if (!ready.current) return;
+      const body = latestRef.current ?? inflightRef.current;
+      if (!body) return;
+      latestRef.current = null;
+      if (timerRef.current != null) window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+      void sendCenik(body, true);
+    }
+
+    window.addEventListener("pagehide", flushKeepalive);
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flushKeepalive();
+    };
+    document.addEventListener("visibilitychange", onHide);
+
+    void (async () => {
+      let wait = 400;
+      while (!cancel) {
+        try {
+          const response = await fetch("/api/cenik", { cache: "no-store" });
+          if (cancel) return;
+          if (!response.ok) throw new Error("cenik");
+          const body = (await response.json()) as { cenik?: unknown };
+          if (cancel) return;
+          const server = body.cenik ? readCenik(body.cenik) : null;
+          const local = parseCenik(localStorage.getItem(STORAGE_KEY));
+          if (!edited.current) {
+            const chosen = preferCenik(local, server);
+            ready.current = true;
+            if (chosen) {
+              const upload =
+                cenikHasEntries(chosen) &&
+                (server == null || !cenikHasEntries(server) || (!sameCenik(chosen, server) && (chosen.savedAt ?? 0) > (server.savedAt ?? 0)));
+              publish(chosen, upload);
+            }
+            return;
+          }
+          const base = preferCenik(baseline, server) ?? baseline;
+          const merged = rebaseCenik(base, baseline, cenikRef.current);
+          const floor = Math.max(merged.savedAt ?? 0, server?.savedAt ?? 0, cenikRef.current.savedAt ?? 0);
+          merged.savedAt = nextStamp(floor);
+          ready.current = true;
+          const canonical = savedEnvelope(merged).payload;
+          publish(merged, !server || !sameCenik(canonical, server));
+          return;
+        } catch {
+          if (cancel) return;
+          if (edited.current || cenikHasEntries(cenikRef.current)) setSaveState("error");
+          await new Promise((resolve) => window.setTimeout(resolve, wait));
+          wait = Math.min(wait * 2, 8000);
+        }
+      }
+    })();
+
+    return () => {
+      cancel = true;
+      window.removeEventListener("pagehide", flushKeepalive);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [publish]);
+
   function setPrice(unitId: string, periodId: string, next: Money) {
+    const current = cenikRef.current;
     commit({
-      ...cenik,
+      ...current,
       prices: {
-        ...prices,
-        [unitId]: { ...prices[unitId], [periodId]: next },
+        ...current.prices,
+        [unitId]: { ...current.prices[unitId], [periodId]: next },
       },
     });
   }
 
   function resetUnit(unitId: string) {
+    const current = cenikRef.current;
     commit({
-      ...cenik,
+      ...current,
       prices: {
-        ...prices,
+        ...current.prices,
         [unitId]: Object.fromEntries(PERIODS.map((period) => [period.id, { ...OPTIMA_PRICES[unitId][period.id] }])),
       },
     });
   }
 
   function setPersonRate(unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) {
-    const row = cenik.personRates[unitId][seasonId];
+    const current = cenikRef.current;
+    const row = current.personRates[unitId][seasonId];
     commit({
-      ...cenik,
+      ...current,
       personRates: {
-        ...cenik.personRates,
+        ...current.personRates,
         [unitId]: {
-          ...cenik.personRates[unitId],
+          ...current.personRates[unitId],
           [seasonId]: { ...row, [guests]: amount },
         },
       },
@@ -328,20 +455,22 @@ export function PriceTables() {
   }
 
   function resetPersonRate(unitId: string) {
+    const current = cenikRef.current;
     commit({
-      ...cenik,
-      personRates: { ...cenik.personRates, [unitId]: defaultPersonRates()[unitId] },
+      ...current,
+      personRates: { ...current.personRates, [unitId]: defaultPersonRates()[unitId] },
     });
   }
 
   function setWeb2027(unitId: string, seasonId: PersonSeasonId, guests: number, amount: number | null) {
-    const row = cenik.web2027[unitId][seasonId];
+    const current = cenikRef.current;
+    const row = current.web2027[unitId][seasonId];
     commit({
-      ...cenik,
+      ...current,
       web2027: {
-        ...cenik.web2027,
+        ...current.web2027,
         [unitId]: {
-          ...cenik.web2027[unitId],
+          ...current.web2027[unitId],
           [seasonId]: { ...row, [guests]: amount },
         },
       },
@@ -349,34 +478,38 @@ export function PriceTables() {
   }
 
   function resetWeb2027(unitId: string) {
+    const current = cenikRef.current;
     commit({
-      ...cenik,
-      web2027: { ...cenik.web2027, [unitId]: emptyPersonRates()[unitId] },
-      webLift: { ...webLift, [unitId]: null },
+      ...current,
+      web2027: { ...current.web2027, [unitId]: emptyPersonRates()[unitId] },
+      webLift: { ...current.webLift, [unitId]: null },
     });
   }
 
   function setCommission(unitId: string, percent: number) {
+    const current = cenikRef.current;
     commit({
-      ...cenik,
-      commission: { ...commission, [unitId]: percent },
+      ...current,
+      commission: { ...current.commission, [unitId]: percent },
     });
   }
 
   function setEarlyBooking(unitId: string, percent: number) {
+    const current = cenikRef.current;
     commit({
-      ...cenik,
-      earlyBooking: { ...earlyBooking, [unitId]: percent },
+      ...current,
+      earlyBooking: { ...current.earlyBooking, [unitId]: percent },
     });
   }
 
   function liftWeb2027(unitId: string, percent: number) {
-    const lifted = liftPersonUnit(unitId, cenik.personRates[unitId], percent);
+    const current = cenikRef.current;
+    const lifted = liftPersonUnit(unitId, current.personRates[unitId], percent);
     if (!lifted) return;
     commit({
-      ...cenik,
-      web2027: { ...cenik.web2027, [unitId]: lifted },
-      webLift: { ...webLift, [unitId]: percent },
+      ...current,
+      web2027: { ...current.web2027, [unitId]: lifted },
+      webLift: { ...current.webLift, [unitId]: percent },
     });
   }
 
@@ -438,6 +571,7 @@ export function PriceTables() {
               )}
             </p>
           </div>
+          <div className="flex flex-wrap items-center gap-3">
           <div className="flex flex-wrap gap-2" role="tablist" aria-label="Pogled">
             <Button
               variant={tab === "cenik" ? "default" : "outline"}
@@ -461,6 +595,12 @@ export function PriceTables() {
               Zasedenost
             </Button>
           </div>
+          {saveState === "idle" ? null : (
+            <p className="text-xs text-muted-foreground" role="status" aria-live="polite">
+              {saveState === "saving" ? "Shranjujem…" : saveState === "saved" ? "Shranjeno" : "Ni shranjeno"}
+            </p>
+          )}
+          </div>
           {tab === "cenik" ? (
             <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
               Pri vsakem bungalovu so najprej fiksne cene WEB, pod njimi variabilne. Fiksne cene so na
@@ -480,7 +620,7 @@ export function PriceTables() {
             commission={commission}
             earlyBooking={earlyBooking}
             lodgeOccupancy={cenik.lodgeOccupancy}
-            onLodgeOccupancy={(percent) => commit({ ...cenik, lodgeOccupancy: percent })}
+            onLodgeOccupancy={(percent) => commit({ ...cenikRef.current, lodgeOccupancy: percent })}
           />
         ) : null}
         {tab === "zasedenost" ? (
@@ -505,7 +645,11 @@ export function PriceTables() {
             2027 trajajo do 10. 1. 2028. Zimski december 2026 pri variabilnih cenah traja do 18. 12.,
             v predlogu 2027 do 27. 12.
           </p>
-          <Button variant="outline" disabled={!dirty} onClick={() => commit({ ...cenik, prices: clonePrices() })}>
+          <Button
+            variant="outline"
+            disabled={!dirty}
+            onClick={() => commit({ ...cenikRef.current, prices: clonePrices() })}
+          >
             Ponastavi predlog 2027
           </Button>
         </div>
@@ -907,6 +1051,15 @@ function PercentLift({
           value={text}
           placeholder="0"
           onFocus={() => setDraft(percentText(value))}
+          onBlur={() => {
+            if (draft === null) return;
+            if (parsed === null || parsed === value) {
+              setDraft(null);
+              return;
+            }
+            onApply(parsed);
+            setDraft(null);
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();

@@ -28,7 +28,10 @@ import {
   PERSON_FLOOR_2027,
   belowPersonFloor2027,
   pricePerPerson,
+  acceptCenikWrite,
   beachWeb2027FromFamily,
+  cenikDropsEntries,
+  cenikHasEntries,
   defaultPersonRates,
   emptyPersonRates,
   liftAmount,
@@ -37,7 +40,9 @@ import {
   netAfterCommission,
   parseCommission,
   parsePercent,
+  preferCenik,
   readCenik,
+  rebaseCenik,
   sanitizeOffers,
   sanitizePrices,
 } from "./pricing";
@@ -407,5 +412,92 @@ describe("cene po osebah", () => {
     assert.equal(summer?.ranges[0].from, "07-09");
     assert.equal(summer?.ranges[0].to, "09-30");
     assert.equal(spring?.ranges[1].from, "10-01");
+  });
+});
+
+describe("vpis ne izgine", () => {
+  it("obdrži ceni 2027 za 1 in 2 osebi in dvig Beach", () => {
+    const cenik = readCenik({
+      web2027: {
+        "ocean-1": {
+          zima: { "1": 250, "2": 350, "3": 490, "4": 560 },
+          "pomlad-jesen": { "1": 350, "2": 420 },
+          "poletje-december": { "1": 380, "2": 450 },
+        },
+        "beach-4": { zima: { "4": 588, "2": 399 } },
+      },
+      webLift: { "ocean-1": 0, "beach-4": 5 },
+      savedAt: 20,
+    });
+    assert.ok(cenik);
+    assert.equal(cenik.web2027["ocean-1"].zima[2], 350);
+    assert.equal(cenik.web2027["ocean-1"].zima[1], 250);
+    assert.equal(cenik.web2027["ocean-1"].zima[3], null);
+    assert.equal(cenik.web2027["ocean-1"].zima[4], null);
+    assert.equal(cenik.web2027["ocean-1"]["pomlad-jesen"][2], 420);
+    assert.equal(cenik.web2027["ocean-1"]["poletje-december"][2], 450);
+    assert.equal(cenik.web2027["beach-4"].zima[4], 588);
+    assert.equal(cenik.web2027["beach-4"].zima[2], 399);
+    assert.equal(cenik.webLift["beach-4"], 5);
+    assert.equal(cenik.webLift["ocean-1"], 0);
+    assert.equal(cenik.savedAt, 20);
+    assert.equal(cenikHasEntries(cenik), true);
+  });
+
+  it("prazen cenik ne prepiše polnega", () => {
+    const filled = readCenik({ web2027: { "ocean-1": { zima: { "2": 350 } } }, savedAt: 4 });
+    const empty = readCenik({ prices: { "ocean-1": { "zima-1": { min: 560, max: 675 } } } });
+    assert.ok(filled);
+    assert.ok(empty);
+    assert.equal(cenikHasEntries(empty), false);
+    assert.equal(preferCenik(empty, filled)?.web2027["ocean-1"].zima[2], 350);
+    assert.equal(preferCenik(filled, null)?.web2027["ocean-1"].zima[2], 350);
+    assert.equal(preferCenik(null, filled)?.web2027["ocean-1"].zima[2], 350);
+    assert.equal(acceptCenikWrite(filled, empty, true), false);
+    assert.equal(acceptCenikWrite(filled, empty, false), false);
+  });
+
+  it("novejši čas zmaga, starejši zapis pa ne zbriše celic", () => {
+    const older = readCenik({
+      web2027: { "ocean-1": { zima: { "2": 350 }, "pomlad-jesen": { "2": 420 } } },
+      savedAt: 5,
+    });
+    const newer = readCenik({ web2027: { "ocean-1": { zima: { "2": 360 } } }, savedAt: 6 });
+    assert.ok(older);
+    assert.ok(newer);
+    assert.equal(cenikDropsEntries(older, newer), true);
+    assert.equal(preferCenik(newer, older)?.web2027["ocean-1"].zima[2], 360);
+    assert.equal(preferCenik(newer, older)?.web2027["ocean-1"]["pomlad-jesen"][2], 420);
+    assert.equal(acceptCenikWrite(older, newer, false), false);
+    newer.web2027["ocean-1"]["pomlad-jesen"][2] = 420;
+    assert.equal(acceptCenikWrite(older, newer, false), true);
+    newer.savedAt = 4;
+    assert.equal(acceptCenikWrite(older, newer, true), false);
+  });
+
+  it("vpis med nalaganjem ostane, dvig Beach pa ne pade", () => {
+    const server = readCenik({
+      web2027: {
+        "ocean-1": { zima: { "2": 100 }, "pomlad-jesen": { "2": 420 } },
+        "beach-4": { zima: { "2": 399, "4": 588 } },
+      },
+      webLift: { "beach-4": 5 },
+      commission: { "ocean-1": 12 },
+      savedAt: 8,
+    });
+    const baseline = readCenik({ prices: { "beach-4": { "zima-1": { min: null, max: null } } } });
+    assert.ok(server);
+    assert.ok(baseline);
+    const edited = structuredClone(baseline);
+    edited.web2027["ocean-1"].zima[2] = 350;
+    edited.web2027["beach-4"].zima[2] = 350;
+    edited.savedAt = 9;
+    const merged = rebaseCenik(server, baseline, edited);
+    assert.equal(merged.web2027["ocean-1"].zima[2], 350);
+    assert.equal(merged.web2027["ocean-1"]["pomlad-jesen"][2], 420);
+    assert.equal(merged.web2027["beach-4"].zima[2], 399);
+    assert.equal(merged.web2027["beach-4"].zima[4], 588);
+    assert.equal(merged.webLift["beach-4"], 5);
+    assert.equal(merged.commission["ocean-1"], 12);
   });
 });
