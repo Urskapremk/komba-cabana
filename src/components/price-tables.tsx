@@ -1163,19 +1163,14 @@ function WebCompareCard({
                         />
                       ) : null}
                       <PerPerson amount={amount} guests={count} commission={commission} earlyBooking={earlyBooking} />
-                      {(family || extraBeds || oneExtraBed) && count === 2 ? (
-                        <>
-                          <GalleryStay twoPerson={amount} place={adultPlace} pairPercent={oneExtraBed ? galleryPair : pairForBeds} singleBed={oneExtraBed} />
-                          {family || extraBeds ? <GalleryPairLine setPrice={amount} percent={galleryPair} /> : null}
-                          {oneExtraBed ? <ExtraBedLine twoPerson={amount} percent={galleryPair} /> : null}
-                        </>
-                      ) : null}
                     </td>
                   );
                 })}
                 {childGuests.map((count) => (
                   <td key={`web-child-${count}`} className={cn(bodyCell, "align-top text-right")}>
                     <GalleryStay twoPerson={currentTwo} place={adultPlace} pairPercent={oneExtraBed ? galleryPair : pairForBeds} singleBed={oneExtraBed} />
+                    {oneExtraBed ? <ExtraBedLine twoPerson={currentTwo} percent={galleryPair} /> : null}
+                    {family || extraBeds ? <GalleryPairLine setPrice={currentTwo} percent={galleryPair} /> : null}
                   </td>
                 ))}
                 {nextPriceGuests.map((count) => {
@@ -1205,27 +1200,22 @@ function WebCompareCard({
                           <Delta base={current[season.id]?.[count] ?? null} next={amount} />
                         </span>
                       ) : null}
-                      {(family || extraBeds || oneExtraBed) && count === 2 ? (
-                        <>
-                          <GalleryStay twoPerson={yearGallery} place={adultPlace} pairPercent={oneExtraBed ? galleryPair : pairForBeds} singleBed={oneExtraBed} fromCurrent={nextTwo == null && currentTwo != null} />
-                          {oneExtraBed ? (
-                            <ExtraBedLine twoPerson={yearGallery} percent={galleryPair} fromCurrent={nextTwo == null && currentTwo != null} />
-                          ) : null}
-                          {family || extraBeds ? (
-                            <GalleryPairLine
-                              setPrice={nextTwo == null ? yearGallery : nextTwo}
-                              percent={galleryPair}
-                              fromCurrent={nextTwo == null && currentTwo != null}
-                            />
-                          ) : null}
-                        </>
-                      ) : null}
                     </td>
                   );
                 })}
                 {nextChildGuests.map((count) => (
                   <td key={`next-child-${count}`} className={cn(bodyCell, "align-top text-right")}>
                     <GalleryStay twoPerson={yearGallery} place={adultPlace} pairPercent={oneExtraBed ? galleryPair : pairForBeds} singleBed={oneExtraBed} fromCurrent={nextTwo == null && currentTwo != null} />
+                    {oneExtraBed ? (
+                      <ExtraBedLine twoPerson={yearGallery} percent={galleryPair} fromCurrent={nextTwo == null && currentTwo != null} />
+                    ) : null}
+                    {family || extraBeds ? (
+                      <GalleryPairLine
+                        setPrice={nextTwo == null ? yearGallery : nextTwo}
+                        percent={galleryPair}
+                        fromCurrent={nextTwo == null && currentTwo != null}
+                      />
+                    ) : null}
                   </td>
                 ))}
               </tr>
