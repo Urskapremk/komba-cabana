@@ -1064,8 +1064,8 @@ function WebCompareCard({
           <GalleryPairSummary current={current} next={next} percent={galleryPair} extraBeds={extraBeds} />
         </div>
       ) : null}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#7a1f33] bg-[#7a1f33] px-4 py-2 text-[#f8efe6]">
-        <p className="text-sm">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#e4d8c4] bg-[#f3e6c8] px-4 py-2">
+        <p className="text-sm text-[#3f3424]">
           <span className="font-medium">2027</span>
           <span className="ml-2">
             {linkedToFamily && lift == null
@@ -1108,11 +1108,11 @@ function WebCompareCard({
               </th>
               <th
                 colSpan={nextPriceGuests.length + nextChildGuests.length}
-                className={cn(headCell, "bg-[#7a1f33] text-center text-[#f8efe6]")}
+                className={cn(headCell, "bg-[#f3e6c8] text-center")}
                 style={yearFrame({ left: true, right: true, top: true })}
               >
                 2027
-                <span className="mt-0.5 block text-[10px] font-normal tracking-normal text-[#f8efe6]/80 normal-case">
+                <span className="mt-0.5 block text-[10px] font-normal tracking-normal normal-case">
                   {family ? "2 in 1 oseba, otroka izračunana · " : extraBeds ? "2 in 1 oseba, dodatni ležišči izračunani · " : oneExtraBed ? "2 in 1 oseba, dodatno ležišče izračunano · " : ""}
                   min. {PERSON_FLOOR_2027} € na osebo
                 </span>
@@ -1132,7 +1132,7 @@ function WebCompareCard({
               {nextPriceGuests.map((count, index) => (
                 <th
                   key={`next-${count}`}
-                  className={cn(headCell, "bg-[#7a1f33] text-right text-[#f8efe6]")}
+                  className={cn(headCell, "bg-[#f3e6c8] text-right")}
                   style={yearFrame({
                     left: index === 0,
                     right: nextChildGuests.length === 0 && index === nextPriceGuests.length - 1,
@@ -1144,7 +1144,7 @@ function WebCompareCard({
               {nextChildGuests.map((count, index) => (
                 <th
                   key={`next-child-${count}`}
-                  className={cn(headCell, "bg-[#7a1f33] text-right text-[#f8efe6]")}
+                  className={cn(headCell, "bg-[#f3e6c8] text-right")}
                   style={yearFrame({ right: index === nextChildGuests.length - 1 })}
                 >
                   {bedLabel(count)}
