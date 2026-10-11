@@ -64,6 +64,7 @@ import {
   liftPersonUnit,
   afterChannels,
   afterDiscounts,
+  optimaGuestNote,
   cenikHasEntries,
   parseCommission,
   parsePercent,
@@ -299,6 +300,19 @@ function bungalowSlice(source: Cenik, unitId: string) {
   });
 }
 
+function withGuestNotes(cenik: Cenik): Cenik {
+  const pair = cenik.galleryPair ?? emptyWebLift();
+  const notes = { ...(cenik.optimaNotes ?? {}) };
+  let changed = false;
+  for (const card of PERSON_RATE_CARDS) {
+    if (notes[card.id]?.trim()) continue;
+    notes[card.id] = optimaGuestNote(card.id, pair[card.id] ?? null);
+    changed = true;
+  }
+  if (!changed) return cenik;
+  return { ...cenik, optimaNotes: notes };
+}
+
 function checksForUnit(checks: PriceChecks | undefined, unitId: string): PriceChecks {
   const next: PriceChecks = {};
   for (const [key, value] of Object.entries(checks ?? {})) {
@@ -482,15 +496,19 @@ export function PriceTables() {
             const chosen = preferCenik(local, server);
             ready.current = true;
             if (chosen) {
+              const filled = withGuestNotes(chosen);
               const upload =
-                cenikHasEntries(chosen) &&
-                (server == null || !cenikHasEntries(server) || (!sameCenik(chosen, server) && (chosen.savedAt ?? 0) > (server.savedAt ?? 0)));
-              publish(chosen, upload);
+                filled !== chosen ||
+                (cenikHasEntries(filled) &&
+                  (server == null ||
+                    !cenikHasEntries(server) ||
+                    (!sameCenik(filled, server) && (filled.savedAt ?? 0) > (server.savedAt ?? 0))));
+              publish(filled, upload);
             }
             return;
           }
           const base = preferCenik(baseline, server) ?? baseline;
-          const merged = rebaseCenik(base, baseline, cenikRef.current);
+          const merged = withGuestNotes(rebaseCenik(base, baseline, cenikRef.current));
           const floor = Math.max(merged.savedAt ?? 0, server?.savedAt ?? 0, cenikRef.current.savedAt ?? 0);
           merged.savedAt = nextStamp(floor);
           ready.current = true;
@@ -804,6 +822,7 @@ export function PriceTables() {
             web2027={cenik.web2027}
             note={cenik.optimaNote ?? ""}
             notes={cenik.optimaNotes ?? {}}
+            pairPercents={galleryPair}
             onNote={setOptimaNote}
             onUnitNote={setOptimaUnitNote}
           />

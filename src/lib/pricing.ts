@@ -1207,6 +1207,34 @@ export function childStaySentence(): string {
   return "Če je 3. ali 4. oseba otrok: 0–5 let je bivanje brezplačno, 5–10 let −50 %, 10–15 let −20 %.";
 }
 
+const OPTIMA_CHILD_BANDS = "0–5 let je bivanje brezplačno, 5–10 let −50 %, 10–15 let −20 %";
+
+/**
+ * Opomba za Optima Plus: kako se računa otrok ali dodatni gost.
+ * Odstotek je popust, vpisan pri bungalovu. Brez odstotka ostane polovica cene za 2 osebi.
+ */
+export function optimaGuestNote(unitId: string, pairPercent: number | null): string {
+  const percent =
+    pairPercent != null && Number.isFinite(pairPercent) && pairPercent >= 0 && pairPercent <= 100
+      ? formatPercent(pairPercent)
+      : null;
+  if (unitId === "ocean-2" || unitId === "garden-3") {
+    const adult = percent
+      ? `Odrasla oseba na dodatnem ležišču plača polovico cene za 2 osebi, znižano za ${percent}.`
+      : "Odrasla oseba na dodatnem ležišču plača polovico cene za 2 osebi.";
+    const child = percent
+      ? `Otrok se računa od polovice cene za 2 osebi, brez teh ${percent}: ${OPTIMA_CHILD_BANDS}.`
+      : `Otrok se računa od polovice cene za 2 osebi: ${OPTIMA_CHILD_BANDS}.`;
+    return `Eno dodatno ležišče je za otroka ali odraslo osebo. ${adult} Znesek je zaokrožen na evro. ${child}`;
+  }
+  const place = unitId === "beach-4" ? "na dodatnih ležiščih" : "v galeriji";
+  const who = unitId === "beach-4" ? "3. in 4. oseba sta na dodatnih ležiščih, otrok ali odrasla oseba." : "3. in 4. oseba spita v galeriji.";
+  const pair = percent
+    ? `Če sta ${place} dva odrasla, je popust ${percent} od cene za 2 osebi. Ostanek je za oba, vsak plača polovico.`
+    : `Če sta ${place} dva odrasla, vpisani odstotek zniža ceno za 2 osebi. Ostanek je za oba, vsak plača polovico.`;
+  return `${who} Ena odrasla oseba ${place === "v galeriji" ? "v galeriji" : "na dodatnem ležišču"} plača polovico cene za 2 osebi. ${pair} Znesek je zaokrožen na evro. Otrok se računa od cene ene odrasle osebe, to je od polovice cene za 2 osebi: ${OPTIMA_CHILD_BANDS}.`;
+}
+
 export type WebLift = Record<string, number | null>;
 
 export function emptyWebLift(): WebLift {

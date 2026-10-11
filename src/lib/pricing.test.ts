@@ -34,6 +34,7 @@ import {
   galleryAdultPrice,
   galleryPairSentence,
   galleryPairStay,
+  optimaGuestNote,
   PERSON_FLOOR_2027,
   belowPersonFloor2027,
   pricePerPerson,
@@ -648,5 +649,28 @@ describe("vpis ne izgine", () => {
     assert.equal(merged.optimaNote, "med tipkanjem");
     assert.equal(merged.optimaNotes["ocean-2"], "II");
     assert.equal(merged.optimaNotes["ocean-1"], "I");
+  });
+
+  it("opomba za Optima razloži otroka in dodatnega gosta", () => {
+    const family = optimaGuestNote("ocean-1", 20);
+    const second = optimaGuestNote("ocean-2", 20);
+    const third = optimaGuestNote("garden-3", 20);
+    const beach = optimaGuestNote("beach-4", 20);
+    assert.match(family, /galeriji/);
+    assert.match(family, /polovico cene za 2 osebi/);
+    assert.match(family, /20 %/);
+    assert.match(family, /0–5 let/);
+    assert.match(family, /5–10 let −50 %/);
+    assert.match(family, /10–15 let −20 %/);
+    assert.match(second, /dodatnem ležišču/);
+    assert.match(second, /brez teh 20 %/);
+    assert.equal(third.includes("dodatnem ležišču"), true);
+    assert.match(beach, /dodatnih ležiščih/);
+    assert.equal(beach.includes("galeriji"), false);
+    assert.ok(family.length < 2000);
+    assert.ok(beach.length < 2000);
+    const open = optimaGuestNote("ocean-2", null);
+    assert.equal(open.includes("znižano"), false);
+    assert.match(open, /polovico cene za 2 osebi/);
   });
 });

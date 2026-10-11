@@ -10,9 +10,11 @@ import {
   PERSON_RATE_CARDS,
   PERSON_SEASONS,
   type PersonRates,
+  type WebLift,
   formatEuro,
   formatSeasonRange,
   guestLabel,
+  optimaGuestNote,
   web2027Columns,
 } from "@/lib/pricing";
 
@@ -26,6 +28,15 @@ const SEASON_SOFT: Record<string, string> = {
 
 function seasonWhen(season: (typeof PERSON_SEASONS)[number]): string {
   return season.ranges.map((range) => formatSeasonRange(range.from, range.to, 2027)).join(", ");
+}
+
+export function resolvedOptimaNotes(notes: Record<string, string>, pairPercents: WebLift): Record<string, string> {
+  const next: Record<string, string> = {};
+  for (const card of PERSON_RATE_CARDS) {
+    const saved = notes[card.id];
+    next[card.id] = saved?.trim() ? saved : optimaGuestNote(card.id, pairPercents[card.id] ?? null);
+  }
+  return next;
 }
 
 export function optimaMessage(web2027: PersonRates, note: string, notes: Record<string, string>): string {
@@ -57,22 +68,25 @@ export function OptimaPlus({
   web2027,
   note,
   notes,
+  pairPercents,
   onNote,
   onUnitNote,
 }: {
   web2027: PersonRates;
   note: string;
   notes: Record<string, string>;
+  pairPercents: WebLift;
   onNote: (text: string) => void;
   onUnitNote: (unitId: string, text: string) => void;
 }) {
+  const shownNotes = resolvedOptimaNotes(notes, pairPercents);
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
 
   async function copyMessage() {
     setCopyError(false);
     try {
-      await navigator.clipboard.writeText(optimaMessage(web2027, note, notes));
+      await navigator.clipboard.writeText(optimaMessage(web2027, note, shownNotes));
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -158,7 +172,7 @@ export function OptimaPlus({
               <Label htmlFor={`optima-note-${card.id}`}>Opomba</Label>
               <Textarea
                 id={`optima-note-${card.id}`}
-                value={notes[card.id] ?? ""}
+                value={shownNotes[card.id] ?? ""}
                 maxLength={2000}
                 placeholder={`Opomba za ${card.name}.`}
                 onChange={(event) => onUnitNote(card.id, event.target.value)}
