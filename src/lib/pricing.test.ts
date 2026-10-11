@@ -607,4 +607,46 @@ describe("vpis ne izgine", () => {
     assert.equal(merged.webLift["beach-4"], 5);
     assert.equal(merged.commission["ocean-1"], 12);
   });
+
+  it("obrazložitev in opomba za Optima Plus ostaneta", () => {
+    const stored = readCenik({
+      optimaNote: "  Želim višje poletje.\u0000 ",
+      optimaNotes: { "ocean-1": "Family ostane pri 2 osebah.", neznan: "x", "ocean-2": "   " },
+      web2027: { "ocean-1": { zima: { "2": 350 } } },
+    });
+    assert.ok(stored);
+    assert.equal(stored.optimaNote, "  Želim višje poletje. ");
+    assert.equal(stored.optimaNotes["ocean-1"], "Family ostane pri 2 osebah.");
+    assert.equal(stored.optimaNotes["ocean-2"], undefined);
+    assert.equal("neznan" in stored.optimaNotes, false);
+    assert.equal(stored.optimaNote.length <= 4000, true);
+
+    const long = readCenik({ optimaNote: "a".repeat(5000) });
+    assert.equal(long?.optimaNote.length, 4000);
+
+    const withNote = readCenik({ optimaNote: "Ostani", optimaNotes: { "garden-3": "III" }, savedAt: 2 });
+    const blank = readCenik({ web2027: { "ocean-1": { zima: { "2": 360 } } }, savedAt: 3 });
+    assert.ok(withNote);
+    assert.ok(blank);
+    assert.equal(cenikDropsEntries(withNote, blank), true);
+    const kept = preferCenik(blank, withNote);
+    assert.equal(kept?.optimaNote, "Ostani");
+    assert.equal(kept?.optimaNotes["garden-3"], "III");
+    assert.equal(kept?.web2027["ocean-1"].zima[2], 360);
+
+    const server = readCenik({ optimaNote: "s strežnika", optimaNotes: { "ocean-1": "I" }, savedAt: 8 });
+    const baseline = readCenik({ prices: { "ocean-1": { "zima-1": { min: null, max: null } } } });
+    assert.ok(server);
+    assert.ok(baseline);
+    const untouched = rebaseCenik(server, baseline, structuredClone(baseline));
+    assert.equal(untouched.optimaNote, "s strežnika");
+    assert.equal(untouched.optimaNotes["ocean-1"], "I");
+    const edited = structuredClone(baseline);
+    edited.optimaNote = "med tipkanjem";
+    edited.optimaNotes = { "ocean-2": "II" };
+    const merged = rebaseCenik(server, baseline, edited);
+    assert.equal(merged.optimaNote, "med tipkanjem");
+    assert.equal(merged.optimaNotes["ocean-2"], "II");
+    assert.equal(merged.optimaNotes["ocean-1"], "I");
+  });
 });

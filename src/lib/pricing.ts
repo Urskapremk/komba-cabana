@@ -640,9 +640,29 @@ export type SavedCenik = {
   booking: WebLift;
   /** Zelena kljukica pri ceni. False pomeni, da je bila odznačena. */
   checks: PriceChecks;
+  /** Obrazložitev cen WEB 2027 za Optima Plus. */
+  optimaNote: string;
+  /** Opomba pri bungalovu na zavihku Optima Plus. */
+  optimaNotes: Record<string, string>;
   lodgeOccupancy: number;
   savedAt?: number;
 };
+
+function sanitizeOptimaText(input: unknown, limit: number): string {
+  if (typeof input !== "string") return "";
+  return input.replace(/\u0000/g, "").slice(0, limit);
+}
+
+function sanitizeOptimaNotes(input: unknown): Record<string, string> {
+  const next: Record<string, string> = {};
+  if (!input || typeof input !== "object") return next;
+  const source = input as Record<string, unknown>;
+  for (const card of PERSON_RATE_CARDS) {
+    const text = sanitizeOptimaText(source[card.id], 2000);
+    if (text.trim()) next[card.id] = text;
+  }
+  return next;
+}
 
 function sanitizeSavedAt(value: unknown): number | undefined {
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 8_640_000_000_000_000) {
@@ -665,6 +685,8 @@ export function readCenik(input: unknown): SavedCenik | null {
     optima?: unknown;
     booking?: unknown;
     checks?: unknown;
+    optimaNote?: unknown;
+    optimaNotes?: unknown;
     lodgeOccupancy?: unknown;
     savedAt?: unknown;
   };
@@ -680,7 +702,10 @@ export function readCenik(input: unknown): SavedCenik | null {
   const optima = sanitizeCommission(envelope.optima);
   const booking = sanitizeCommission(envelope.booking);
   const checks = sanitizePriceChecks(envelope.checks);
+  const optimaNote = sanitizeOptimaText(envelope.optimaNote, 4000);
+  const optimaNotes = sanitizeOptimaNotes(envelope.optimaNotes);
   const hasCheck = Object.values(checks).some(Boolean);
+  const hasOptimaText = optimaNote.trim() !== "" || Object.values(optimaNotes).some((text) => text.trim() !== "");
   if (
     !prices &&
     !offers &&
@@ -692,7 +717,8 @@ export function readCenik(input: unknown): SavedCenik | null {
     !galleryPair &&
     !optima &&
     !booking &&
-    !hasCheck
+    !hasCheck &&
+    !hasOptimaText
   ) {
     return null;
   }
@@ -709,6 +735,8 @@ export function readCenik(input: unknown): SavedCenik | null {
     optima: optima ?? emptyWebLift(),
     booking: booking ?? emptyWebLift(),
     checks,
+    optimaNote,
+    optimaNotes,
     lodgeOccupancy: sanitizeLodgeOccupancy(envelope.lodgeOccupancy),
     ...(savedAt ? { savedAt } : {}),
   };
@@ -758,6 +786,10 @@ export function cenikEntryScore(cenik: SavedCenik): number {
     if (marked) score += 1;
   }
   if (cenik.lodgeOccupancy !== 100) score += 1;
+  if (cenik.optimaNote?.trim()) score += 1;
+  for (const card of PERSON_RATE_CARDS) {
+    if (cenik.optimaNotes?.[card.id]?.trim()) score += 1;
+  }
   return score;
 }
 
@@ -810,7 +842,11 @@ export function cenikDropsEntries(existing: SavedCenik, incoming: SavedCenik): b
     if (dropsAmount(amountOrNull(existing.booking?.[card.id]), amountOrNull(incoming.booking?.[card.id]), null)) {
       return true;
     }
+    const beforeNote = existing.optimaNotes?.[card.id]?.trim() ?? "";
+    const afterNote = incoming.optimaNotes?.[card.id]?.trim() ?? "";
+    if (beforeNote !== "" && afterNote === "") return true;
   }
+  if ((existing.optimaNote?.trim() ?? "") !== "" && (incoming.optimaNote?.trim() ?? "") === "") return true;
   return dropsAmount(existing.lodgeOccupancy, incoming.lodgeOccupancy, 100);
 }
 
@@ -897,6 +933,12 @@ export function mergeCenik(primary: SavedCenik, fallback: SavedCenik): SavedCeni
     );
   }
   next.checks = { ...(fallback.checks ?? {}), ...(primary.checks ?? {}) };
+  next.optimaNote = primary.optimaNote?.trim() ? primary.optimaNote : (fallback.optimaNote ?? "");
+  next.optimaNotes = {};
+  for (const card of PERSON_RATE_CARDS) {
+    const own = primary.optimaNotes?.[card.id]?.trim() ?? "";
+    next.optimaNotes[card.id] = own ? primary.optimaNotes[card.id] : (fallback.optimaNotes?.[card.id] ?? "");
+  }
   next.lodgeOccupancy = pickAmount(primary.lodgeOccupancy, fallback.lodgeOccupancy, 100) ?? 100;
   const savedAt = Math.max(primary.savedAt ?? 0, fallback.savedAt ?? 0);
   if (savedAt > 0) next.savedAt = savedAt;
@@ -934,6 +976,8 @@ export function rebaseCenik(base: SavedCenik, baseline: SavedCenik, edited: Save
   next.galleryPair = { ...emptyWebLift(), ...next.galleryPair };
   next.optima = { ...emptyWebLift(), ...next.optima };
   next.booking = { ...emptyWebLift(), ...next.booking };
+  next.optimaNotes = { ...(base.optimaNotes ?? {}) };
+  next.optimaNote = base.optimaNote ?? "";
   next.checks = { ...(base.checks ?? {}) };
   const beachMirrorOnly =
     amountOrNull(baseline.webLift["beach-4"]) == null && amountOrNull(edited.webLift["beach-4"]) == null;
@@ -979,7 +1023,11 @@ export function rebaseCenik(base: SavedCenik, baseline: SavedCenik, edited: Save
     if (amountOrNull(baseline.booking?.[card.id]) !== amountOrNull(edited.booking?.[card.id])) {
       next.booking[card.id] = amountOrNull(edited.booking?.[card.id]);
     }
+    const beforeNote = baseline.optimaNotes?.[card.id] ?? "";
+    const afterNote = edited.optimaNotes?.[card.id] ?? "";
+    if (beforeNote !== afterNote) next.optimaNotes[card.id] = afterNote;
   }
+  if ((baseline.optimaNote ?? "") !== (edited.optimaNote ?? "")) next.optimaNote = edited.optimaNote ?? "";
   if (baseline.lodgeOccupancy !== edited.lodgeOccupancy) next.lodgeOccupancy = edited.lodgeOccupancy;
   if (stableCenik({ checks: baseline.checks ?? {} }) !== stableCenik({ checks: edited.checks ?? {} })) {
     next.checks = { ...(edited.checks ?? {}) };

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { OccupancyView } from "@/components/occupancy-view";
+import { OptimaPlus } from "@/components/optima-plus";
 import { YearEarnings } from "@/components/year-earnings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -156,6 +157,8 @@ function blankCenik(): Cenik {
     optima: emptyWebLift(),
     booking: emptyWebLift(),
     checks: {},
+    optimaNote: "",
+    optimaNotes: {},
     lodgeOccupancy: 100,
   };
 }
@@ -320,6 +323,8 @@ function savedEnvelope(next: Cenik) {
     optima: synced.optima ?? emptyWebLift(),
     booking: synced.booking ?? emptyWebLift(),
     checks: synced.checks ?? {},
+    optimaNote: synced.optimaNote ?? "",
+    optimaNotes: synced.optimaNotes ?? {},
     lodgeOccupancy: synced.lodgeOccupancy,
     ...(synced.savedAt ? { savedAt: synced.savedAt } : {}),
   };
@@ -629,6 +634,18 @@ export function PriceTables() {
     });
   }
 
+  function setOptimaNote(text: string) {
+    commit({ ...cenikRef.current, optimaNote: text.slice(0, 4000) });
+  }
+
+  function setOptimaUnitNote(unitId: string, text: string) {
+    const current = cenikRef.current;
+    commit({
+      ...current,
+      optimaNotes: { ...(current.optimaNotes ?? {}), [unitId]: text.slice(0, 2000) },
+    });
+  }
+
   function setBooking(unitId: string, percent: number) {
     const current = cenikRef.current;
     commit({
@@ -659,7 +676,7 @@ export function PriceTables() {
   const dirty = BUNGALOWS.some((bungalow) =>
     PERIODS.some((period) => !sameMoney(prices[bungalow.id][period.id], OPTIMA_PRICES[bungalow.id][period.id])),
   );
-  const [tab, setTab] = useState<"cenik" | "zasluzek" | "zasedenost">("cenik");
+  const [tab, setTab] = useState<"cenik" | "optima" | "zasluzek" | "zasedenost">("cenik");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [variableCollapsed, setVariableCollapsed] = useState<Record<string, boolean>>({});
   function unitOpen(id: string) {
@@ -678,13 +695,14 @@ export function PriceTables() {
     const read = () => {
       if (window.location.hash === "#zasluzek") setTab("zasluzek");
       else if (window.location.hash === "#zasedenost") setTab("zasedenost");
+      else if (window.location.hash === "#optima") setTab("optima");
       else setTab("cenik");
     };
     read();
     window.addEventListener("hashchange", read);
     return () => window.removeEventListener("hashchange", read);
   }, []);
-  function selectTab(next: "cenik" | "zasluzek" | "zasedenost") {
+  function selectTab(next: "cenik" | "optima" | "zasluzek" | "zasedenost") {
     const hash = next === "cenik" ? "#cenik" : `#${next}`;
     if (window.location.hash !== hash) window.location.hash = hash;
     setTab(next);
@@ -712,6 +730,12 @@ export function PriceTables() {
                   <br />
                   leto 2026
                 </>
+              ) : tab === "optima" ? (
+                <>
+                  Cene WEB 2027
+                  <br />
+                  za Optima Plus
+                </>
               ) : (
                 <>
                   Fiksne cene WEB
@@ -729,6 +753,13 @@ export function PriceTables() {
               onClick={() => selectTab("cenik")}
             >
               Cenik
+            </Button>
+            <Button
+              variant={tab === "optima" ? "default" : "outline"}
+              aria-selected={tab === "optima"}
+              onClick={() => selectTab("optima")}
+            >
+              Optima Plus
             </Button>
             <Button
               variant={tab === "zasluzek" ? "default" : "outline"}
@@ -758,11 +789,25 @@ export function PriceTables() {
               Polni penzion ni vključen. Leto 2027 je v isti tabeli, desno od trenutnih cen.               Pri vsakem bungalovu s gumbom Shrani fiksiraš cene. Vpis ostane na strežniku tudi, če se
               povezava do strani zamenja.
             </p>
+          ) : tab === "optima" ? (
+            <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
+              Cene WEB za leto 2027 po bungalovih. Z njimi Optimi Plus sporočiš, kakšne cene želiš.
+              Obrazložitev velja za ves cenik, opomba za en bungalov. Oboje se shrani skupaj s cenami.
+            </p>
           ) : null}
         </div>
       </header>
 
       <main className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col gap-12 px-4 py-8 md:px-6 md:py-10">
+        {tab === "optima" ? (
+          <OptimaPlus
+            web2027={cenik.web2027}
+            note={cenik.optimaNote ?? ""}
+            notes={cenik.optimaNotes ?? {}}
+            onNote={setOptimaNote}
+            onUnitNote={setOptimaUnitNote}
+          />
+        ) : null}
         {tab === "zasluzek" ? (
           <YearEarnings
             web={cenik.personRates}
