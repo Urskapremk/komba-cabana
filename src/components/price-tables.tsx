@@ -738,7 +738,7 @@ export function PriceTables() {
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
               {tab === "zasluzek" ? (
                 <>
-                  Polna zasedenost
+                  Zaslužek WEB 2027
                   <br />
                   odprto od marca
                 </>
@@ -829,8 +829,7 @@ export function PriceTables() {
         ) : null}
         {tab === "zasluzek" ? (
           <YearEarnings
-            web={cenik.personRates}
-            next={cenik.web2027}
+            rates={cenik.web2027}
             commission={commission}
             earlyBooking={earlyBooking}
             lodgeOccupancy={cenik.lodgeOccupancy}

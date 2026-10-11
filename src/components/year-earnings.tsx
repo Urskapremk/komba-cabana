@@ -14,7 +14,7 @@ import {
   type WebLift,
 } from "@/lib/pricing";
 import { applyLodgeOccupancy, lodgeOccupancy2026 } from "@/lib/occupancy";
-import { EARNINGS_YEAR, MONTH_LABELS, yearEarnings, type EarnLine, type YearEarnings } from "@/lib/year-earnings";
+import { EARNINGS_YEAR, MONTH_LABELS, yearEarnings, type EarnLine } from "@/lib/year-earnings";
 
 const UNIT_SHORT: Record<string, string> = {
   "ocean-1": "I",
@@ -24,30 +24,22 @@ const UNIT_SHORT: Record<string, string> = {
 };
 
 export function YearEarnings({
-  web,
-  next,
+  rates,
   commission,
   earlyBooking,
   lodgeOccupancy,
   onLodgeOccupancy,
 }: {
-  web: PersonRates;
-  next: PersonRates;
+  rates: PersonRates;
   commission: WebLift;
   earlyBooking: WebLift;
   lodgeOccupancy: number;
   onLodgeOccupancy: (percent: number) => void;
 }) {
-  const [source, setSource] = useState<"web" | "2027">("web");
-  const current = useMemo(
-    () => applyLodgeOccupancy(yearEarnings(EARNINGS_YEAR, web, commission, earlyBooking), lodgeOccupancy),
-    [web, commission, earlyBooking, lodgeOccupancy],
+  const year = useMemo(
+    () => applyLodgeOccupancy(yearEarnings(EARNINGS_YEAR, rates, commission, earlyBooking), lodgeOccupancy),
+    [rates, commission, earlyBooking, lodgeOccupancy],
   );
-  const planned = useMemo(
-    () => applyLodgeOccupancy(yearEarnings(EARNINGS_YEAR, next, commission, earlyBooking), lodgeOccupancy),
-    [next, commission, earlyBooking, lodgeOccupancy],
-  );
-  const active = source === "web" ? current : planned;
   const lastYear = lodgeOccupancy2026();
 
   return (
@@ -55,8 +47,8 @@ export function YearEarnings({
       <div className="flex flex-col gap-3">
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
           Januar in februar sta zaprta zaradi obnove. Od marca določiš, kako zaseden je Lodge. 100 % pomeni,
-          da je vsak bungalov zaseden vsako odprto noč leta {EARNINGS_YEAR}. Pri vseh bungalovih velja web
-          cena za 2 osebi. 4 osebe so izjema in v zaslužek niso vštete. Ostane = polna cena − agencija −
+          da je vsak bungalov zaseden vsako odprto noč leta {EARNINGS_YEAR}. Pri vseh bungalovih velja cena
+          WEB {EARNINGS_YEAR} za 2 osebi. 4 osebe so izjema in v zaslužek niso vštete. Ostane = polna cena − agencija −
           early booking. Oba odbitka sta od polne cene, z odstotki iz cenika.
         </p>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-[#efe6d4] px-4 py-3 ring-1 ring-[#e4d8c4]">
@@ -73,37 +65,23 @@ export function YearEarnings({
             Lani {formatPercent(lastYear)}
           </button>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SourceCard
-            title="Trenutni WEB"
-            selected={source === "web"}
-            year={current}
-            onSelect={() => setSource("web")}
-          />
-          <SourceCard
-            title="WEB 2027"
-            selected={source === "2027"}
-            year={planned}
-            onSelect={() => setSource("2027")}
-          />
-        </div>
       </div>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <TotalCard
           label="Polna cena"
-          value={active.gross}
-          hint={`${active.nights} odprtih noči · Lodge ${formatPercent(lodgeOccupancy)}`}
+          value={year.gross}
+          hint={`${year.nights} odprtih noči · Lodge ${formatPercent(lodgeOccupancy)}`}
         />
-        <TotalCard label="Agencija" value={active.agency} hint="od polne cene" tone="plum" />
-        <TotalCard label="Early booking" value={active.early} hint="od polne cene" tone="sea" />
+        <TotalCard label="Agencija" value={year.agency} hint="od polne cene" tone="plum" />
+        <TotalCard label="Early booking" value={year.early} hint="od polne cene" tone="sea" />
         <TotalCard
-          label={active.missingNights === 0 ? "Ostane" : "Ostane od vpisanih noči"}
-          value={active.left}
+          label={year.missingNights === 0 ? "Ostane" : "Ostane od vpisanih noči"}
+          value={year.left}
           hint={
-            active.missingNights === 0
+            year.missingNights === 0
               ? `pri zasedenosti Lodge ${formatPercent(lodgeOccupancy)}`
-              : `manjka cena za ${active.missingNights} noči bungalovov`
+              : `manjka cena za ${year.missingNights} noči bungalovov`
           }
           emphasis
         />
@@ -111,7 +89,7 @@ export function YearEarnings({
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {PERSON_RATE_CARDS.map((card) => {
-          const line = active.units[card.id];
+          const line = year.units[card.id];
           const agency = commission[card.id];
           const early = earlyBooking[card.id];
           return (
@@ -138,7 +116,7 @@ export function YearEarnings({
 
       <section className="overflow-hidden rounded-2xl ring-1 ring-foreground/10">
         <div className="bg-[#1c1915] px-4 py-3 text-[#f6f1e7]">
-          <h2 className="font-heading text-lg tracking-tight">Po mesecih · {source === "web" ? "trenutni WEB" : "WEB 2027"}</h2>
+          <h2 className="font-heading text-lg tracking-tight">Po mesecih · WEB {EARNINGS_YEAR}</h2>
           <p className="text-xs text-white/70">
             Znesek pri bungalovu je ostanek po obeh popustih, pri zasedenosti Lodge {formatPercent(lodgeOccupancy)}.
           </p>
@@ -167,7 +145,7 @@ export function YearEarnings({
               </tr>
             </thead>
             <tbody>
-              {active.months.map((month) =>
+              {year.months.map((month) =>
                 month.closed ? (
                   <tr key={month.month} className="bg-[#f3efe8] text-muted-foreground">
                     <td className={cn(cell, "text-left")}>
@@ -211,55 +189,23 @@ export function YearEarnings({
             </tbody>
             <tfoot>
               <tr className="bg-[#1c1915] text-[#f6f1e7]">
-                <td className={cn(cell, "border-[#3a342c] text-left font-medium")}>Leto {active.year}</td>
-                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{active.nights}</td>
+                <td className={cn(cell, "border-[#3a342c] text-left font-medium")}>Leto {year.year}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{year.nights}</td>
                 {PERSON_RATE_CARDS.map((card) => (
                   <td key={card.id} className={cn(cell, "border-[#3a342c] text-right font-medium tabular-nums")}>
-                    {formatEuro(active.units[card.id].left)}
+                    {formatEuro(year.units[card.id].left)}
                   </td>
                 ))}
-                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(active.gross)}</td>
-                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(active.agency)}</td>
-                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(active.early)}</td>
-                <td className={cn(cell, "border-[#3a342c] text-right font-medium tabular-nums")}>{formatEuro(active.left)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(year.gross)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(year.agency)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(year.early)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right font-medium tabular-nums")}>{formatEuro(year.left)}</td>
               </tr>
             </tfoot>
           </table>
         </div>
       </section>
     </div>
-  );
-}
-
-function SourceCard({
-  title,
-  year,
-  selected,
-  onSelect,
-}: {
-  title: string;
-  year: YearEarnings;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onSelect}
-      className={cn(
-        "rounded-2xl px-4 py-4 text-left ring-1 transition-colors",
-        selected ? "bg-[#1c1915] text-[#f6f1e7] ring-[#1c1915]" : "bg-card text-foreground ring-foreground/10 hover:bg-[#f8f1e4]",
-      )}
-    >
-      <span className="text-xs font-medium tracking-[0.16em] uppercase">{title}</span>
-      <span className="mt-2 block font-heading text-3xl tracking-tight tabular-nums">{formatEuro(year.left)}</span>
-      <span className={cn("mt-1 block text-xs", selected ? "text-white/70" : "text-muted-foreground")}>
-        {year.missingNights === 0
-          ? `ostane pri tej zasedenosti · polna cena ${formatEuro(year.gross)}`
-          : `samo vpisane noči · manjka cena za ${year.missingNights} noči bungalovov`}
-      </span>
-    </button>
   );
 }
 
