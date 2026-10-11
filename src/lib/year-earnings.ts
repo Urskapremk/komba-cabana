@@ -66,6 +66,21 @@ export function afterSalaries(left: number, months = 12): number {
   return left - salaryCost(months);
 }
 
+/** Povprečni mesečni dobiček izletov. Šteje od marca, ko je Lodge odprt. */
+export const MONTHLY_TRIP_PROFIT = 800;
+
+/** Povprečni mesečni dobiček transporta. Šteje od marca, ko je Lodge odprt. */
+export const MONTHLY_TRANSPORT_PROFIT = 600;
+
+export function monthPlanResult(lodgeLeft: number, closed: boolean): number {
+  const activities = closed ? 0 : MONTHLY_TRIP_PROFIT + MONTHLY_TRANSPORT_PROFIT;
+  return lodgeLeft - MONTHLY_SALARY + activities;
+}
+
+export function planResult(lodgeLeft: number, monthCount: number, openMonths: number): number {
+  return lodgeLeft - salaryCost(monthCount) + (MONTHLY_TRIP_PROFIT + MONTHLY_TRANSPORT_PROFIT) * openMonths;
+}
+
 export function monthIsClosed(month: number): boolean {
   return (CLOSED_MONTHS as readonly number[]).includes(month);
 }

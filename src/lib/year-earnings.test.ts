@@ -1,7 +1,18 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { defaultPersonRates, emptyPersonRates, emptyWebLift } from "./pricing";
-import { afterSalaries, monthSeasonSlices, MONTHLY_SALARY, personSeasonOn, salaryCost, yearEarnings } from "./year-earnings";
+import {
+  afterSalaries,
+  monthPlanResult,
+  monthSeasonSlices,
+  MONTHLY_SALARY,
+  MONTHLY_TRANSPORT_PROFIT,
+  MONTHLY_TRIP_PROFIT,
+  personSeasonOn,
+  planResult,
+  salaryCost,
+  yearEarnings,
+} from "./year-earnings";
 
 describe("web sezone po dnevih", () => {
   it("julij 9.–13. obračuna kot poletje, ker se začne pozneje", () => {
@@ -76,6 +87,13 @@ describe("zaslužek pri polni zasedenosti", () => {
     assert.equal(salaryCost(year.months.length), 14400);
     assert.equal(afterSalaries(year.left, year.months.length), 553580 - 14400);
     assert.equal(salaryCost(1), 1200);
+    const openMonths = year.months.filter((month) => !month.closed).length;
+    assert.equal(openMonths, 10);
+    assert.equal(MONTHLY_TRIP_PROFIT, 800);
+    assert.equal(MONTHLY_TRANSPORT_PROFIT, 600);
+    assert.equal(monthPlanResult(0, true), -1200);
+    assert.equal(monthPlanResult(1000, false), 1000 - 1200 + 800 + 600);
+    assert.equal(planResult(year.left, year.months.length, openMonths), 553580 - 14400 + 8000 + 6000);
   });
 
   it("oba popusta odšteje od cene za 2 osebi in pomnoži z odprtimi nočmi", () => {

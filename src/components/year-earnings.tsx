@@ -18,7 +18,10 @@ import {
   EARNINGS_YEAR,
   MONTH_LABELS,
   MONTHLY_SALARY,
-  afterSalaries,
+  MONTHLY_TRANSPORT_PROFIT,
+  MONTHLY_TRIP_PROFIT,
+  monthPlanResult,
+  planResult,
   salaryCost,
   yearEarnings,
   type EarnLine,
@@ -48,8 +51,11 @@ export function YearEarnings({
     () => applyLodgeOccupancy(yearEarnings(EARNINGS_YEAR, rates, commission, earlyBooking), lodgeOccupancy),
     [rates, commission, earlyBooking, lodgeOccupancy],
   );
+  const openMonths = year.months.filter((month) => !month.closed).length;
   const salaries = salaryCost(year.months.length);
-  const afterPay = afterSalaries(year.left, year.months.length);
+  const trips = MONTHLY_TRIP_PROFIT * openMonths;
+  const transport = MONTHLY_TRANSPORT_PROFIT * openMonths;
+  const together = planResult(year.left, year.months.length, openMonths);
   const lastYear = lodgeOccupancy2026();
 
   return (
@@ -60,7 +66,9 @@ export function YearEarnings({
           da je vsak bungalov zaseden vsako odprto noč leta {EARNINGS_YEAR}. Pri vseh bungalovih velja cena
           WEB {EARNINGS_YEAR} za 2 osebi. 4 osebe so izjema in v zaslužek niso vštete. Ostane = polna cena − agencija −
           early booking. Oba odbitka sta od polne cene, z odstotki iz cenika. Plače so {formatEuro(MONTHLY_SALARY)} na
-          mesec, vseh 12 mesecev, tudi januarja in februarja. Zasedenost jih ne zniža.
+          mesec, vseh 12 mesecev, tudi januarja in februarja. Zasedenost jih ne zniža. Izleti prinesejo povprečno{" "}
+          {formatEuro(MONTHLY_TRIP_PROFIT)} dobička na mesec, transport {formatEuro(MONTHLY_TRANSPORT_PROFIT)}. Oboje
+          šteje od marca do decembra.
         </p>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-[#efe6d4] px-4 py-3 ring-1 ring-[#e4d8c4]">
           <p className="text-sm text-[#3f3424]">
@@ -78,7 +86,7 @@ export function YearEarnings({
         </div>
       </div>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <TotalCard
           label="Polna cena"
           value={year.gross}
@@ -102,9 +110,21 @@ export function YearEarnings({
           tone="plum"
         />
         <TotalCard
-          label="Po plačah"
-          value={afterPay}
-          hint="ostane − plače"
+          label="Izleti"
+          value={trips}
+          hint={`${formatEuro(MONTHLY_TRIP_PROFIT)} dobička · ${openMonths} mesecev`}
+          tone="sea"
+        />
+        <TotalCard
+          label="Transport"
+          value={transport}
+          hint={`${formatEuro(MONTHLY_TRANSPORT_PROFIT)} dobička · ${openMonths} mesecev`}
+          tone="sea"
+        />
+        <TotalCard
+          label="Skupaj"
+          value={together}
+          hint="ostane − plače + izleti + transport"
           emphasis
         />
       </section>
@@ -141,11 +161,12 @@ export function YearEarnings({
           <h2 className="font-heading text-lg tracking-tight">Po mesecih · WEB {EARNINGS_YEAR}</h2>
           <p className="text-xs text-white/70">
             Znesek pri bungalovu je ostanek po obeh popustih, pri zasedenosti Lodge {formatPercent(lodgeOccupancy)}.
-            Plače so {formatEuro(MONTHLY_SALARY)} na mesec.
+            Plače so {formatEuro(MONTHLY_SALARY)} na mesec. Izleti {formatEuro(MONTHLY_TRIP_PROFIT)} in transport{" "}
+            {formatEuro(MONTHLY_TRANSPORT_PROFIT)} sta dobiček od marca.
           </p>
         </div>
         <div className="max-w-full overflow-x-auto bg-card">
-          <table className="w-full min-w-[1040px] border-collapse text-sm">
+          <table className="w-full min-w-[1240px] border-collapse text-sm">
             <caption className="sr-only">
               Zaslužek po mesecih pri polni zasedenosti, leto {EARNINGS_YEAR}
             </caption>
@@ -166,7 +187,9 @@ export function YearEarnings({
                 <th className={cn(head, "text-right text-[#1e3a46]")}>Early booking</th>
                 <th className={cn(head, "bg-[#f3e6c8] text-right")}>Ostane</th>
                 <th className={cn(head, "text-right text-[#6b3058]")}>Plače</th>
-                <th className={cn(head, "bg-[#f3e6c8] text-right")}>Po plačah</th>
+                <th className={cn(head, "text-right text-[#1d6b45]")}>Izleti</th>
+                <th className={cn(head, "text-right text-[#1d6b45]")}>Transport</th>
+                <th className={cn(head, "bg-[#f3e6c8] text-right")}>Skupaj</th>
               </tr>
             </thead>
             <tbody>
@@ -188,7 +211,9 @@ export function YearEarnings({
                     <td className={cn(cell, "text-right")}>—</td>
                     <td className={cn(cell, "text-right")}>—</td>
                     <td className={cn(cell, "text-right tabular-nums text-[#6b3058]")}>{formatEuro(MONTHLY_SALARY)}</td>
-                    <td className={cn(cell, "text-right font-medium tabular-nums")}>{formatEuro(-MONTHLY_SALARY)}</td>
+                    <td className={cn(cell, "text-right tabular-nums")}>{formatEuro(0)}</td>
+                    <td className={cn(cell, "text-right tabular-nums")}>{formatEuro(0)}</td>
+                    <td className={cn(cell, "text-right font-medium tabular-nums")}>{formatEuro(monthPlanResult(0, true))}</td>
                   </tr>
                 ) : (
                 month.slices.map((slice, index) => (
@@ -212,8 +237,14 @@ export function YearEarnings({
                     <td className={cn(cell, "text-right tabular-nums text-[#6b3058]")}>
                       {index === 0 ? formatEuro(MONTHLY_SALARY) : "—"}
                     </td>
+                    <td className={cn(cell, "text-right tabular-nums text-[#1d6b45]")}>
+                      {index === 0 ? formatEuro(MONTHLY_TRIP_PROFIT) : "—"}
+                    </td>
+                    <td className={cn(cell, "text-right tabular-nums text-[#1d6b45]")}>
+                      {index === 0 ? formatEuro(MONTHLY_TRANSPORT_PROFIT) : "—"}
+                    </td>
                     <td className={cn(cell, "text-right font-medium tabular-nums")}>
-                      {formatEuro(index === 0 ? slice.left - MONTHLY_SALARY : slice.left)}
+                      {formatEuro(index === 0 ? monthPlanResult(slice.left, false) : slice.left)}
                     </td>
                   </tr>
                 ))
@@ -234,7 +265,9 @@ export function YearEarnings({
                 <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(year.early)}</td>
                 <td className={cn(cell, "border-[#3a342c] text-right font-medium tabular-nums")}>{formatEuro(year.left)}</td>
                 <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(salaries)}</td>
-                <td className={cn(cell, "border-[#3a342c] text-right font-medium tabular-nums")}>{formatEuro(afterPay)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(trips)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(transport)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right font-medium tabular-nums")}>{formatEuro(together)}</td>
               </tr>
             </tfoot>
           </table>
