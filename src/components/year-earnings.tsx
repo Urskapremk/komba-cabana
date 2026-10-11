@@ -34,6 +34,11 @@ const UNIT_SHORT: Record<string, string> = {
   "beach-4": "Beach",
 };
 
+const INCOME = "text-[#1b4332]";
+const COST = "text-[#7a1f33]";
+const INCOME_ON_DARK = "text-[#d7efe2]";
+const COST_ON_DARK = "text-[#f6c9d2]";
+
 export function YearEarnings({
   rates,
   commission,
@@ -86,47 +91,62 @@ export function YearEarnings({
         </div>
       </div>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <TotalCard
-          label="Polna cena"
-          value={year.gross}
-          hint={`${year.nights} odprtih noči · Lodge ${formatPercent(lodgeOccupancy)}`}
-        />
-        <TotalCard label="Agencija" value={year.agency} hint="od polne cene" tone="plum" />
-        <TotalCard label="Early booking" value={year.early} hint="od polne cene" tone="sea" />
-        <TotalCard
-          label={year.missingNights === 0 ? "Ostane" : "Ostane od vpisanih noči"}
-          value={year.left}
-          hint={
-            year.missingNights === 0
-              ? `pri zasedenosti Lodge ${formatPercent(lodgeOccupancy)}`
-              : `manjka cena za ${year.missingNights} noči bungalovov`
-          }
-        />
-        <TotalCard
-          label="Plače"
-          value={salaries}
-          hint={`${formatEuro(MONTHLY_SALARY)} na mesec · 12 mesecev`}
-          tone="plum"
-        />
-        <TotalCard
-          label="Izleti"
-          value={trips}
-          hint={`${formatEuro(MONTHLY_TRIP_PROFIT)} dobička · ${openMonths} mesecev`}
-          tone="sea"
-        />
-        <TotalCard
-          label="Transport"
-          value={transport}
-          hint={`${formatEuro(MONTHLY_TRANSPORT_PROFIT)} dobička · ${openMonths} mesecev`}
-          tone="sea"
-        />
-        <TotalCard
-          label="Skupaj"
-          value={together}
-          hint="ostane − plače + izleti + transport"
-          emphasis
-        />
+      <section className="flex flex-col gap-6">
+        <div>
+          <h2 className={cn("text-xs font-medium tracking-[0.16em] uppercase", INCOME)}>Prihodki</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <TotalCard
+              label="Polna cena"
+              value={year.gross}
+              hint={`${year.nights} odprtih noči · Lodge ${formatPercent(lodgeOccupancy)}`}
+              tone="income"
+            />
+            <TotalCard
+              label="Izleti"
+              value={trips}
+              hint={`${formatEuro(MONTHLY_TRIP_PROFIT)} dobička · ${openMonths} mesecev`}
+              tone="income"
+            />
+            <TotalCard
+              label="Transport"
+              value={transport}
+              hint={`${formatEuro(MONTHLY_TRANSPORT_PROFIT)} dobička · ${openMonths} mesecev`}
+              tone="income"
+            />
+            <TotalCard
+              label={year.missingNights === 0 ? "Ostane od nočitev" : "Ostane od vpisanih noči"}
+              value={year.left}
+              hint={
+                year.missingNights === 0
+                  ? `po agenciji in early bookingu · Lodge ${formatPercent(lodgeOccupancy)}`
+                  : `manjka cena za ${year.missingNights} noči bungalovov`
+              }
+              tone="income"
+            />
+          </div>
+        </div>
+        <div>
+          <h2 className={cn("text-xs font-medium tracking-[0.16em] uppercase", COST)}>Stroški</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <TotalCard label="Agencija" value={year.agency} hint="od polne cene" tone="cost" />
+            <TotalCard label="Early booking" value={year.early} hint="od polne cene" tone="cost" />
+            <TotalCard
+              label="Plače"
+              value={salaries}
+              hint={`${formatEuro(MONTHLY_SALARY)} na mesec · 12 mesecev`}
+              tone="cost"
+            />
+          </div>
+        </div>
+        <div className="max-w-sm">
+          <TotalCard
+            label="Skupaj"
+            value={together}
+            hint="ostane − plače + izleti + transport"
+            tone={together < 0 ? "cost" : "income"}
+            emphasis
+          />
+        </div>
       </section>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -140,14 +160,14 @@ export function YearEarnings({
               <p className="mt-1 text-xs text-muted-foreground">
                 2 osebi · vsaka noč
               </p>
-              <p className="mt-2 text-sm text-[#6b3058]">
+              <p className={cn("mt-2 text-sm", COST)}>
                 Agencija {agency == null ? "ni vpisana" : formatPercent(agency)}
               </p>
-              <p className="text-sm text-[#1e3a46]">
+              <p className={cn("text-sm", COST)}>
                 Early booking {early == null ? "ni vpisan" : formatPercent(early)}
               </p>
-              <p className="mt-3 font-heading text-2xl tracking-tight tabular-nums">{formatEuro(line.left)}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className={cn("mt-3 font-heading text-2xl tracking-tight tabular-nums", INCOME)}>{formatEuro(line.left)}</p>
+              <p className={cn("text-xs", INCOME)}>
                 polna cena {formatEuro(line.gross)}
                 {line.missingNights > 0 ? ` · manjka ${line.missingNights} noči` : ""}
               </p>
@@ -175,20 +195,20 @@ export function YearEarnings({
                 <th className={cn(head, "bg-[#efe6d4] text-left")}>Mesec</th>
                 <th className={cn(head, "bg-[#efe6d4] text-right")}>Noči</th>
                 {PERSON_RATE_CARDS.map((card) => (
-                  <th key={card.id} className={cn(head, "bg-[#e4eef2] text-right")} title={card.name}>
+                  <th key={card.id} className={cn(head, "bg-[#e7f2ea] text-right", INCOME)} title={card.name}>
                     {UNIT_SHORT[card.id]}
                     <span className="mt-0.5 block text-[10px] font-normal tracking-normal normal-case">
                       2 osebi
                     </span>
                   </th>
                 ))}
-                <th className={cn(head, "text-right")}>Polna cena</th>
-                <th className={cn(head, "text-right text-[#6b3058]")}>Agencija</th>
-                <th className={cn(head, "text-right text-[#1e3a46]")}>Early booking</th>
-                <th className={cn(head, "bg-[#f3e6c8] text-right")}>Ostane</th>
-                <th className={cn(head, "text-right text-[#6b3058]")}>Plače</th>
-                <th className={cn(head, "text-right text-[#1d6b45]")}>Izleti</th>
-                <th className={cn(head, "text-right text-[#1d6b45]")}>Transport</th>
+                <th className={cn(head, "bg-[#e7f2ea] text-right", INCOME)}>Polna cena</th>
+                <th className={cn(head, "bg-[#e7f2ea] text-right", INCOME)}>Izleti</th>
+                <th className={cn(head, "bg-[#e7f2ea] text-right", INCOME)}>Transport</th>
+                <th className={cn(head, "bg-[#f8e4e8] text-right", COST)}>Agencija</th>
+                <th className={cn(head, "bg-[#f8e4e8] text-right", COST)}>Early booking</th>
+                <th className={cn(head, "bg-[#f8e4e8] text-right", COST)}>Plače</th>
+                <th className={cn(head, "bg-[#e7f2ea] text-right", INCOME)}>Ostane</th>
                 <th className={cn(head, "bg-[#f3e6c8] text-right")}>Skupaj</th>
               </tr>
             </thead>
@@ -207,13 +227,13 @@ export function YearEarnings({
                       </td>
                     ))}
                     <td className={cn(cell, "text-right")}>—</td>
+                    <td className={cn(cell, "text-right tabular-nums", INCOME)}>{formatEuro(0)}</td>
+                    <td className={cn(cell, "text-right tabular-nums", INCOME)}>{formatEuro(0)}</td>
                     <td className={cn(cell, "text-right")}>—</td>
                     <td className={cn(cell, "text-right")}>—</td>
+                    <td className={cn(cell, "text-right tabular-nums", COST)}>{formatEuro(MONTHLY_SALARY)}</td>
                     <td className={cn(cell, "text-right")}>—</td>
-                    <td className={cn(cell, "text-right tabular-nums text-[#6b3058]")}>{formatEuro(MONTHLY_SALARY)}</td>
-                    <td className={cn(cell, "text-right tabular-nums")}>{formatEuro(0)}</td>
-                    <td className={cn(cell, "text-right tabular-nums")}>{formatEuro(0)}</td>
-                    <td className={cn(cell, "text-right font-medium tabular-nums")}>{formatEuro(monthPlanResult(0, true))}</td>
+                    <td className={cn(cell, "text-right font-medium tabular-nums", COST)}>{formatEuro(monthPlanResult(0, true))}</td>
                   </tr>
                 ) : (
                 month.slices.map((slice, index) => (
@@ -230,20 +250,20 @@ export function YearEarnings({
                         <Money line={slice.units[card.id]} />
                       </td>
                     ))}
-                    <td className={cn(cell, "text-right tabular-nums")}>{formatEuro(slice.gross)}</td>
-                    <td className={cn(cell, "text-right tabular-nums text-[#6b3058]")}>{formatEuro(slice.agency)}</td>
-                    <td className={cn(cell, "text-right tabular-nums text-[#1e3a46]")}>{formatEuro(slice.early)}</td>
-                    <td className={cn(cell, "text-right font-medium tabular-nums")}>{formatEuro(slice.left)}</td>
-                    <td className={cn(cell, "text-right tabular-nums text-[#6b3058]")}>
-                      {index === 0 ? formatEuro(MONTHLY_SALARY) : "—"}
-                    </td>
-                    <td className={cn(cell, "text-right tabular-nums text-[#1d6b45]")}>
+                    <td className={cn(cell, "text-right tabular-nums", INCOME)}>{formatEuro(slice.gross)}</td>
+                    <td className={cn(cell, "text-right tabular-nums", INCOME)}>
                       {index === 0 ? formatEuro(MONTHLY_TRIP_PROFIT) : "—"}
                     </td>
-                    <td className={cn(cell, "text-right tabular-nums text-[#1d6b45]")}>
+                    <td className={cn(cell, "text-right tabular-nums", INCOME)}>
                       {index === 0 ? formatEuro(MONTHLY_TRANSPORT_PROFIT) : "—"}
                     </td>
-                    <td className={cn(cell, "text-right font-medium tabular-nums")}>
+                    <td className={cn(cell, "text-right tabular-nums", COST)}>{formatEuro(slice.agency)}</td>
+                    <td className={cn(cell, "text-right tabular-nums", COST)}>{formatEuro(slice.early)}</td>
+                    <td className={cn(cell, "text-right tabular-nums", COST)}>
+                      {index === 0 ? formatEuro(MONTHLY_SALARY) : "—"}
+                    </td>
+                    <td className={cn(cell, "text-right font-medium tabular-nums", INCOME)}>{formatEuro(slice.left)}</td>
+                    <td className={cn(cell, "text-right font-medium tabular-nums", resultTone(index === 0 ? monthPlanResult(slice.left, false) : slice.left))}>
                       {formatEuro(index === 0 ? monthPlanResult(slice.left, false) : slice.left)}
                     </td>
                   </tr>
@@ -256,18 +276,20 @@ export function YearEarnings({
                 <td className={cn(cell, "border-[#3a342c] text-left font-medium")}>Leto {year.year}</td>
                 <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{year.nights}</td>
                 {PERSON_RATE_CARDS.map((card) => (
-                  <td key={card.id} className={cn(cell, "border-[#3a342c] text-right font-medium tabular-nums")}>
+                  <td key={card.id} className={cn(cell, "border-[#3a342c] text-right font-medium tabular-nums", INCOME_ON_DARK)}>
                     {formatEuro(year.units[card.id].left)}
                   </td>
                 ))}
-                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(year.gross)}</td>
-                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(year.agency)}</td>
-                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(year.early)}</td>
-                <td className={cn(cell, "border-[#3a342c] text-right font-medium tabular-nums")}>{formatEuro(year.left)}</td>
-                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(salaries)}</td>
-                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(trips)}</td>
-                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums")}>{formatEuro(transport)}</td>
-                <td className={cn(cell, "border-[#3a342c] text-right font-medium tabular-nums")}>{formatEuro(together)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums", INCOME_ON_DARK)}>{formatEuro(year.gross)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums", INCOME_ON_DARK)}>{formatEuro(trips)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums", INCOME_ON_DARK)}>{formatEuro(transport)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums", COST_ON_DARK)}>{formatEuro(year.agency)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums", COST_ON_DARK)}>{formatEuro(year.early)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right tabular-nums", COST_ON_DARK)}>{formatEuro(salaries)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right font-medium tabular-nums", INCOME_ON_DARK)}>{formatEuro(year.left)}</td>
+                <td className={cn(cell, "border-[#3a342c] text-right font-medium tabular-nums", resultTone(together, true))}>
+                  {formatEuro(together)}
+                </td>
               </tr>
             </tfoot>
           </table>
@@ -337,7 +359,7 @@ function TotalCard({
   label: string;
   value: number;
   hint: string;
-  tone?: "plum" | "sea";
+  tone?: "income" | "cost";
   emphasis?: boolean;
 }) {
   return (
@@ -345,17 +367,11 @@ function TotalCard({
       className={cn(
         "rounded-2xl px-4 py-3 ring-1",
         emphasis ? "bg-[#f3e6c8] ring-[#e4d8c4]" : "bg-card ring-foreground/10",
+        tone === "income" && INCOME,
+        tone === "cost" && COST,
       )}
     >
-      <p
-        className={cn(
-          "text-xs font-medium tracking-[0.14em] uppercase",
-          tone === "plum" && "text-[#6b3058]",
-          tone === "sea" && "text-[#1e3a46]",
-        )}
-      >
-        {label}
-      </p>
+      <p className="text-xs font-medium tracking-[0.14em] uppercase">{label}</p>
       <p className="mt-2 font-heading text-2xl tracking-tight tabular-nums">{formatEuro(value)}</p>
       <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
     </article>
@@ -367,13 +383,18 @@ function Money({ line }: { line: EarnLine }) {
     return <span className="text-xs text-[#8a3b28]">ni cene</span>;
   }
   return (
-    <span className="tabular-nums">
+    <span className={cn("tabular-nums", INCOME)}>
       {formatEuro(line.left)}
       {line.nightlyLeft != null ? (
         <span className="mt-0.5 block text-xs text-muted-foreground">{formatEuro(line.nightlyLeft)} / noč</span>
       ) : null}
     </span>
   );
+}
+
+function resultTone(amount: number, onDark = false): string {
+  if (amount < 0) return onDark ? COST_ON_DARK : COST;
+  return onDark ? INCOME_ON_DARK : INCOME;
 }
 
 function sliceTone(seasonId: string): string {
