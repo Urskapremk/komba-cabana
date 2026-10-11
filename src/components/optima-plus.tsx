@@ -117,13 +117,12 @@ export function OptimaPlus({
             <h2 className="font-heading text-3xl tracking-tight">{card.name}</h2>
             <p className="text-sm text-muted-foreground">Cena WEB na noč, leto 2027. Polni penzion ni vključen.</p>
             <div className="max-w-full overflow-x-auto rounded-xl bg-card" style={{ border: `3px solid ${BORDO}` }}>
-              <table className="w-full min-w-[640px] border-collapse text-sm">
+              <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="bg-[#f3e6c8] text-xs tracking-wide text-[#5c5142] uppercase">
-                    <th className="px-3 py-2 text-left font-medium">Obdobje</th>
-                    <th className="px-3 py-2 text-left font-medium">Datumi 2027</th>
+                    <th className="px-3 py-2 text-left font-medium">Obdobje 2027</th>
                     {columns.map((count) => (
-                      <th key={count} className="px-3 py-2 text-right font-medium">
+                      <th key={count} className="w-[5.5rem] px-3 py-2 text-right font-medium">
                         {guestLabel(count)}
                       </th>
                     ))}
@@ -132,12 +131,20 @@ export function OptimaPlus({
                 <tbody>
                   {PERSON_SEASONS.map((season) => (
                     <tr key={season.id} className={cn("border-t border-[#eadfce]", SEASON_SOFT[season.id])}>
-                      <th className="px-3 py-3 text-left font-medium">{season.label}</th>
-                      <td className="px-3 py-3 text-[#3f3424]">{seasonWhen(season)}</td>
+                      <th className="px-3 py-3 text-left font-medium">
+                        <span className="block">{season.label}</span>
+                        <span className="mt-1 block text-xs font-normal tracking-normal text-[#3f3424] normal-case">
+                          {season.ranges.map((range) => (
+                            <span key={`${range.from}-${range.to}`} className="block">
+                              {formatSeasonRange(range.from, range.to, 2027)}
+                            </span>
+                          ))}
+                        </span>
+                      </th>
                       {columns.map((count) => {
                         const amount = web2027[card.id]?.[season.id]?.[count] ?? null;
                         return (
-                          <td key={count} className="px-3 py-3 text-right font-medium tabular-nums">
+                          <td key={count} className="px-3 py-3 text-right align-top font-medium tabular-nums">
                             {formatEuro(amount)}
                           </td>
                         );
