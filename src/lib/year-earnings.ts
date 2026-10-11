@@ -55,6 +55,17 @@ export const CLOSED_MONTHS = [1, 2] as const;
 /** V zaslužku velja cena za 2 osebi. 4 osebe so izjema in se ne štejejo. */
 export const EARNINGS_GUESTS = 2;
 
+/** Mesečni strošek plač v planski kalkulaciji. Velja vseh 12 mesecev, tudi ob zaprtju. */
+export const MONTHLY_SALARY = 1200;
+
+export function salaryCost(months = 12): number {
+  return MONTHLY_SALARY * months;
+}
+
+export function afterSalaries(left: number, months = 12): number {
+  return left - salaryCost(months);
+}
+
 export function monthIsClosed(month: number): boolean {
   return (CLOSED_MONTHS as readonly number[]).includes(month);
 }
