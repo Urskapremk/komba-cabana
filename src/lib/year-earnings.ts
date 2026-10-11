@@ -81,6 +81,36 @@ export function planResult(lodgeLeft: number, monthCount: number, openMonths: nu
   return lodgeLeft - salaryCost(monthCount) + (MONTHLY_TRIP_PROFIT + MONTHLY_TRANSPORT_PROFIT) * openMonths;
 }
 
+/** Prodajna cena polpenziona na osebo na noč. */
+export const HALF_BOARD_PRICE = 50;
+
+/** Strošek hrane kot odstotek prodajne cene polpenziona. */
+export const FOOD_COST_PERCENT = 33;
+
+export type HalfBoard = {
+  revenue: number;
+  food: number;
+  left: number;
+};
+
+/** Polpenzion za zasedene noči bungalovov. Na noč štejeta 2 gosta. */
+export function halfBoard(bungalowNights: number, occupancyPercent: number): HalfBoard {
+  const share = Math.min(100, Math.max(0, occupancyPercent)) / 100;
+  const guests = bungalowNights * EARNINGS_GUESTS;
+  const revenue = Math.round(guests * share * HALF_BOARD_PRICE);
+  const food = Math.round((revenue * FOOD_COST_PERCENT) / 100);
+  return { revenue, food, left: revenue - food };
+}
+
+export function pricedBungalowNights(units: Record<string, EarnLine>): number {
+  let nights = 0;
+  for (const card of PERSON_RATE_CARDS) {
+    const line = units[card.id];
+    if (line && line.missingNights === 0) nights += line.nights;
+  }
+  return nights;
+}
+
 export function monthIsClosed(month: number): boolean {
   return (CLOSED_MONTHS as readonly number[]).includes(month);
 }

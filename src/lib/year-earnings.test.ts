@@ -3,6 +3,9 @@ import { describe, it } from "node:test";
 import { defaultPersonRates, emptyPersonRates, emptyWebLift } from "./pricing";
 import {
   afterSalaries,
+  FOOD_COST_PERCENT,
+  HALF_BOARD_PRICE,
+  halfBoard,
   monthPlanResult,
   monthSeasonSlices,
   MONTHLY_SALARY,
@@ -94,6 +97,17 @@ describe("zaslužek pri polni zasedenosti", () => {
     assert.equal(monthPlanResult(0, true), -1200);
     assert.equal(monthPlanResult(1000, false), 1000 - 1200 + 800 + 600);
     assert.equal(planResult(year.left, year.months.length, openMonths), 553580 - 14400 + 8000 + 6000);
+    assert.equal(HALF_BOARD_PRICE, 50);
+    assert.equal(FOOD_COST_PERCENT, 33);
+    const full = halfBoard(10, 100);
+    assert.equal(full.revenue, 1000);
+    assert.equal(full.food, 330);
+    assert.equal(full.left, 670);
+    const half = halfBoard(10, 50);
+    assert.equal(half.revenue, 500);
+    assert.equal(half.food, 165);
+    assert.equal(half.left, 335);
+    assert.equal(halfBoard(0, 100).revenue, 0);
   });
 
   it("oba popusta odšteje od cene za 2 osebi in pomnoži z odprtimi nočmi", () => {
