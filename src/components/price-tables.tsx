@@ -345,6 +345,20 @@ function savedEnvelope(next: Cenik) {
   return { synced, payload };
 }
 
+async function readSeedCenik() {
+  try {
+    const response = await fetch(new URL("cenik.json", window.location.href), { cache: "no-store" });
+    if (!response.ok) return null;
+    const body = (await response.json()) as unknown;
+    if (body && typeof body === "object" && "cenik" in body) {
+      return readCenik((body as { cenik?: unknown }).cenik);
+    }
+    return readCenik(body);
+  } catch {
+    return null;
+  }
+}
+
 async function sendCenik(payload: Cenik, keepalive = false): Promise<"ok" | "empty" | "stale" | "error"> {
   try {
     const response = await fetch("/api/cenik", {
@@ -354,7 +368,7 @@ async function sendCenik(payload: Cenik, keepalive = false): Promise<"ok" | "emp
       cache: "no-store",
       keepalive,
     });
-    if (response.ok) return "ok";
+    if (response.ok || response.status === 404) return "ok";
     if (response.status === 409) {
       const body = (await response.json().catch(() => null)) as { reason?: string } | null;
       return body?.reason === "prazno" ? "empty" : "stale";
@@ -487,10 +501,12 @@ export function PriceTables() {
         try {
           const response = await fetch("/api/cenik", { cache: "no-store" });
           if (cancel) return;
-          if (!response.ok) throw new Error("cenik");
-          const body = (await response.json()) as { cenik?: unknown };
+          const offline = response.status === 404;
+          if (!response.ok && !offline) throw new Error("cenik");
+          const body = offline ? null : ((await response.json()) as { cenik?: unknown });
           if (cancel) return;
-          const server = body.cenik ? readCenik(body.cenik) : null;
+          const server = offline ? await readSeedCenik() : body?.cenik ? readCenik(body.cenik) : null;
+          if (cancel) return;
           const local = parseCenik(localStorage.getItem(STORAGE_KEY));
           if (!edited.current) {
             const chosen = preferCenik(local, server);
@@ -498,11 +514,12 @@ export function PriceTables() {
             if (chosen) {
               const filled = withGuestNotes(chosen);
               const upload =
-                filled !== chosen ||
-                (cenikHasEntries(filled) &&
-                  (server == null ||
-                    !cenikHasEntries(server) ||
-                    (!sameCenik(filled, server) && (filled.savedAt ?? 0) > (server.savedAt ?? 0))));
+                !offline &&
+                (filled !== chosen ||
+                  (cenikHasEntries(filled) &&
+                    (server == null ||
+                      !cenikHasEntries(server) ||
+                      (!sameCenik(filled, server) && (filled.savedAt ?? 0) > (server.savedAt ?? 0)))));
               publish(filled, upload);
             }
             return;
@@ -513,7 +530,7 @@ export function PriceTables() {
           merged.savedAt = nextStamp(floor);
           ready.current = true;
           const canonical = savedEnvelope(merged).payload;
-          publish(merged, !server || !sameCenik(canonical, server));
+          publish(merged, !offline && (!server || !sameCenik(canonical, server)));
           return;
         } catch {
           if (cancel) return;
@@ -804,8 +821,8 @@ export function PriceTables() {
             <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
               Pri vsakem bungalovu so najprej fiksne cene WEB, pod njimi variabilne. Fiksne cene so na
               noč za spletno stran. Pri I, II in III je ista cena tudi na Bookingu, Airbnbju in Agodi.
-              Polni penzion ni vključen. Leto 2027 je v isti tabeli, desno od trenutnih cen.               Pri vsakem bungalovu s gumbom Shrani fiksiraš cene. Vpis ostane na strežniku tudi, če se
-              povezava do strani zamenja.
+              Polni penzion ni vključen. Leto 2027 je v isti tabeli, desno od trenutnih cen. Pri vsakem
+              bungalovu s gumbom Shrani fiksiraš cene. Vpis se shrani v tem brskalniku.
             </p>
           ) : tab === "optima" ? (
             <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
