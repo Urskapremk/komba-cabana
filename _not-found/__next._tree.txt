@@ -1,4 +1,4 @@
-:HL["/komba-cabana/_next/static/chunks/3xwsoztl_f9lq.css","style"]
+:HL["/komba-cabana/_next/static/chunks/35ti4ghuai3kg.css","style"]
 2:[["children",{"s":"__PAGE__","h":160}]]
 1:[["children",{"s":"/_not-found","h":96,"c":"$Q2"}]]
-0:{"b":"OJTJIe8Yl2TpKrowqiwnM","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
+0:{"b":"w6YcwQKqd_turdBJp5n1j","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
