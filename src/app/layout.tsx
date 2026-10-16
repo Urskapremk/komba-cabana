@@ -14,7 +14,7 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Kalkulacije cen · Komba Cabana",
+  title: "Komba Cabana ceniki",
   description:
     "Primerjava izhodiščnih cen 2026 in predloga Optima Plus za 2027. Cene bungalovov Komba Cabana urejaš v tabelah.",
 };

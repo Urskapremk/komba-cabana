@@ -749,8 +749,7 @@ export function PriceTables() {
         <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-4 py-8 md:px-6 md:py-10">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-medium tracking-[0.22em] text-primary uppercase">Komba Cabana</p>
-              <h1 className="font-heading mt-2 text-4xl tracking-tight md:text-5xl">Kalkulacije cen</h1>
+              <h1 className="font-heading text-4xl tracking-tight md:text-5xl">Komba Cabana ceniki</h1>
             </div>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
               {tab === "zasluzek" ? (
